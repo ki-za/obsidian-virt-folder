@@ -137,7 +137,53 @@ export class YamlParser
         let file = this.app.workspace.getActiveFile();
         if(!file) return;
         this.app.fileManager.processFrontMatter(file, (fm) => { this._fm_remove_link(fm, yamlProp, old_link); });
-    }    
+    }
+
+    _extract_link_base(link:string): string|null
+    {
+        let regexp = /(?:\[\[(.+?)\||\[\[(.+?)\]\]|\[.+?\]\((.+?)\))/;
+        let match = regexp.exec(link);
+        if(!match) return null;
+        return match[1] || match[2] || match[3] || null;
+    }
+
+    _find_link_for_path(front:any, prop:string, targetPath:string): string|null
+    {
+        if(!(prop in front) || !front[prop]) return null;
+
+        for(let rawLink of front[prop])
+        {
+            let linkBase = this._extract_link_base(rawLink);
+            if(!linkBase) continue;
+            let resolved = this.app.metadataCache.getFirstLinkpathDest(linkBase, '');
+            if(resolved && resolved.path === targetPath) return rawLink;
+        }
+        return null;
+    }
+
+    move_to_folder(noteFile:TFile, yamlProp:string, oldParentPath:string|null, newParentPath:string|null)
+    {
+        this.app.fileManager.processFrontMatter(noteFile, (fm) =>
+        {
+            if(oldParentPath)
+            {
+                let rawLink = this._find_link_for_path(fm, yamlProp, oldParentPath);
+                if(rawLink)
+                {
+                    fm[yamlProp].remove(rawLink);
+                }
+            }
+
+            if(newParentPath)
+            {
+                this._fm_add_link(fm, newParentPath, yamlProp);
+            }
+            else if(oldParentPath)
+            {
+                this.showMessage(`${yamlProp}'s link removed`);
+            }
+        });
+    }
 };
 
 

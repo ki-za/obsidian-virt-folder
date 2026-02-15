@@ -266,5 +266,21 @@ export default class VirtFolderPlugin extends Plugin
 			}
 		).open();
 	}
+
+	moveNoteToFolder(noteId:string, oldParentId:string|null, newParentId:string|null)
+	{
+		let noteFile = this.app.vault.getFileByPath(noteId);
+		if(!noteFile) return;
+
+		this.yaml.move_to_folder(noteFile, this.settings.propertyName, oldParentId, newParentId);
+
+		if(newParentId)
+		{
+			let note = this.base.note_by_id(newParentId);
+			if(note) note.utime = Date.now();
+		}
+
+		this.update_data();
+	}
 }
 

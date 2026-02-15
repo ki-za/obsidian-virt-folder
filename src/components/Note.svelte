@@ -95,7 +95,61 @@
 		myElement.win.scrollTo(0, middle);
 	}
 
-	export const focusNotes = async (pathNotes: string[]) => 
+	let isDragOver = false;
+
+	function getDragParentId(): string|null
+	{
+		let parentId = node_path[node_path.length - 2];
+		if(parentId === 'top_dir' || parentId === 'orphan_dir') return null;
+		return parentId;
+	}
+
+	function handleDragStart(event: DragEvent)
+	{
+		if(type !== 'sub_note' || !event.dataTransfer) return;
+		event.dataTransfer.setData('text/plain', JSON.stringify({
+			id: id,
+			parentId: getDragParentId()
+		}));
+		event.dataTransfer.effectAllowed = 'move';
+	}
+
+	function handleDragOver(event: DragEvent)
+	{
+		event.preventDefault();
+		if(event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+		isDragOver = true;
+	}
+
+	function handleDragLeave()
+	{
+		isDragOver = false;
+	}
+
+	function handleDrop(event: DragEvent)
+	{
+		event.preventDefault();
+		isDragOver = false;
+		if(!event.dataTransfer) return;
+
+		let dragData;
+		try { dragData = JSON.parse(event.dataTransfer.getData('text/plain')); }
+		catch { return; }
+
+		let draggedId: string = dragData.id;
+		let oldParentId: string|null = dragData.parentId;
+
+		if(draggedId === id) return;
+
+		let newParentId: string|null = null;
+		if(type === 'sub_note') newParentId = id;
+
+		if(oldParentId === newParentId) return;
+
+		plugin.moveNoteToFolder(draggedId, oldParentId, newParentId);
+	}
+
+	export const focusNotes = async (pathNotes: string[]) =>
 	{
 		isCollapsed = false;
 		await tick();
@@ -132,6 +186,12 @@
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
 	<div
 		class="tree-item-self is-clickable mod-collapsible {IsOpened ? 'current_note' : ''}"
+		class:vf-drop-target={isDragOver}
+		draggable={type === 'sub_note'}
+		on:dragstart={handleDragStart}
+		on:dragover|preventDefault={handleDragOver}
+		on:dragleave={handleDragLeave}
+		on:drop={handleDrop}
 		on:click={(event) =>
 		{
 			if(event.shiftKey)
@@ -210,6 +270,13 @@
 	.current_note
 	{
 		background-color: var(--background-secondary-alt);
+	}
+
+	.vf-drop-target
+	{
+		background-color: var(--interactive-accent);
+		opacity: 0.85;
+		border-radius: 4px;
 	}
 
 </style>
