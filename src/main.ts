@@ -204,9 +204,9 @@ export default class VirtFolderPlugin extends Plugin
 		this.activateView();
 	}
 
-	VF_RevealActiveFile()
+	async VF_RevealActiveFile()
 	{
-		this.activateView();
+		await this.activateView();
 
 		let file = this.app.workspace.getActiveFile();
 		if(!file) return;
@@ -328,14 +328,14 @@ export default class VirtFolderPlugin extends Plugin
 			this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
 		});
 
-		await this.app.workspace.openLinkText(path, path);
-
 		let metaRef = this.app.metadataCache.on('resolve', (resolved) => {
 			if(resolved.path !== path) return;
 			this.app.metadataCache.offref(metaRef);
 			this.update_data();
 			this.VF_RevealActiveFile();
 		});
+
+		await this.app.workspace.openLinkText(path, path);
 	}
 
 	async deleteNote(noteId: string)

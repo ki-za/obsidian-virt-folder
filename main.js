@@ -3360,8 +3360,8 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
   VF_OpenTreeView() {
     this.activateView();
   }
-  VF_RevealActiveFile() {
-    this.activateView();
+  async VF_RevealActiveFile() {
+    await this.activateView();
     let file = this.app.workspace.getActiveFile();
     if (!file)
       return;
@@ -3462,7 +3462,6 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
       });
-    await this.app.workspace.openLinkText(path, path);
     let metaRef = this.app.metadataCache.on("resolve", (resolved) => {
       if (resolved.path !== path)
         return;
@@ -3470,6 +3469,7 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       this.update_data();
       this.VF_RevealActiveFile();
     });
+    await this.app.workspace.openLinkText(path, path);
   }
   async deleteNote(noteId) {
     let file = this.app.vault.getFileByPath(noteId);
