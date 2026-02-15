@@ -1195,7 +1195,8 @@ var DEFAULT_SETTINGS = {
   sortTreeBy: "file_name" /* file_name */,
   sortTreeRev: false,
   UseWikiLinks: true,
-  confirmDelete: true
+  confirmDelete: true,
+  firstRun: true
 };
 var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin2) {
@@ -3299,6 +3300,11 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
     this.app.workspace.onLayoutReady(() => {
       this.data.onStartApp();
       this.update_data();
+      if (this.settings.firstRun) {
+        this.settings.firstRun = false;
+        this.saveSettings();
+        this.activateView();
+      }
       this.registerEvent(this.app.metadataCache.on("resolve", this.onResolveMetadata));
       this.registerEvent(this.app.workspace.on("file-open", this.onOpenFile, this));
       this.registerEvent(this.app.vault.on("create", this.onCreateFile));
