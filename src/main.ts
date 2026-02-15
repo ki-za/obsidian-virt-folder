@@ -270,7 +270,7 @@ export default class VirtFolderPlugin extends Plugin
 		).open();
 	}
 
-	async createNoteInFolder(parentId: string, unique: boolean = false)
+	async createNoteInFolder(parentId: string|null, unique: boolean = false)
 	{
 		if(unique)
 		{
@@ -284,7 +284,7 @@ export default class VirtFolderPlugin extends Plugin
 			let ref = this.app.vault.on('create', async (file) => {
 				if(!(file instanceof TFile)) return;
 				this.app.vault.offref(ref);
-				await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
+				if(parentId) await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
 					this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
 				});
 
@@ -317,7 +317,7 @@ export default class VirtFolderPlugin extends Plugin
 
 		let file = await this.app.vault.create(path, '');
 
-		await this.app.fileManager.processFrontMatter(file, (fm) => {
+		if(parentId) await this.app.fileManager.processFrontMatter(file, (fm) => {
 			this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
 		});
 

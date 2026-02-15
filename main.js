@@ -2667,26 +2667,29 @@ function instance($$self, $$props, $$invalidate) {
     plugin2.moveNoteToFolder(draggedId, oldParentId, newParentId);
   }
   function handleContextMenu(event) {
-    if (type !== "sub_note")
+    if (type !== "sub_note" && type !== "top_dir")
       return;
     event.preventDefault();
     const menu = new import_obsidian4.Menu();
+    let folderId = type === "top_dir" ? null : id;
     menu.addItem((item) => {
       item.setTitle("Create note").setIcon("plus").onClick(() => {
-        plugin2.createNoteInFolder(id);
+        plugin2.createNoteInFolder(folderId);
       });
     });
     menu.addItem((item) => {
       item.setTitle("Create unique note").setIcon("fingerprint").onClick(() => {
-        plugin2.createNoteInFolder(id, true);
+        plugin2.createNoteInFolder(folderId, true);
       });
     });
-    menu.addSeparator();
-    menu.addItem((item) => {
-      item.setTitle("Delete note").setIcon("trash-2").onClick(() => {
-        plugin2.deleteNote(id);
+    if (type === "sub_note") {
+      menu.addSeparator();
+      menu.addItem((item) => {
+        item.setTitle("Delete note").setIcon("trash-2").onClick(() => {
+          plugin2.deleteNote(id);
+        });
       });
-    });
+    }
     menu.showAtMouseEvent(event);
   }
   const focusNotes = (pathNotes) => __awaiter(void 0, void 0, void 0, function* () {
@@ -3422,9 +3425,10 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
         if (!(file2 instanceof import_obsidian7.TFile))
           return;
         this.app.vault.offref(ref);
-        await this.app.fileManager.processFrontMatter(file2, (fm) => {
-          this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
-        });
+        if (parentId)
+          await this.app.fileManager.processFrontMatter(file2, (fm) => {
+            this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
+          });
         let metaRef2 = this.app.metadataCache.on("resolve", (resolved) => {
           if (resolved.path !== file2.path)
             return;
@@ -3448,9 +3452,10 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       path = `${name} ${counter}.md`;
     }
     let file = await this.app.vault.create(path, "");
-    await this.app.fileManager.processFrontMatter(file, (fm) => {
-      this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
-    });
+    if (parentId)
+      await this.app.fileManager.processFrontMatter(file, (fm) => {
+        this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
+      });
     await this.app.workspace.openLinkText(path, path);
     let metaRef = this.app.metadataCache.on("resolve", (resolved) => {
       if (resolved.path !== path)

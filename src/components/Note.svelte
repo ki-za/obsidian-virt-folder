@@ -155,17 +155,19 @@
 
 	function handleContextMenu(event: MouseEvent)
 	{
-		if(type !== 'sub_note') return;
+		if(type !== 'sub_note' && type !== 'top_dir') return;
 
 		event.preventDefault();
 
 		const menu = new Menu();
 
+		let folderId = type === 'top_dir' ? null : id;
+
 		menu.addItem((item) => {
 			item.setTitle('Create note')
 				.setIcon('plus')
 				.onClick(() => {
-					plugin.createNoteInFolder(id);
+					plugin.createNoteInFolder(folderId);
 				});
 		});
 
@@ -173,19 +175,22 @@
 			item.setTitle('Create unique note')
 				.setIcon('fingerprint')
 				.onClick(() => {
-					plugin.createNoteInFolder(id, true);
+					plugin.createNoteInFolder(folderId, true);
 				});
 		});
 
-		menu.addSeparator();
+		if(type === 'sub_note')
+		{
+			menu.addSeparator();
 
-		menu.addItem((item) => {
-			item.setTitle('Delete note')
-				.setIcon('trash-2')
-				.onClick(() => {
-					plugin.deleteNote(id);
-				});
-		});
+			menu.addItem((item) => {
+				item.setTitle('Delete note')
+					.setIcon('trash-2')
+					.onClick(() => {
+						plugin.deleteNote(id);
+					});
+			});
+		}
 
 		menu.showAtMouseEvent(event);
 	}
