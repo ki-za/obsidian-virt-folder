@@ -79,11 +79,11 @@ export class VF_SelectFile extends FuzzySuggestModal<ShowedItem>
         {
             let path: any = this.plugin.base.get_shortest_path(parent);
             let links = this._format_parents(path);
-            let line = small.createEl('div', {cls:'vf_serach_div'});	
+            let line = small.createEl('div', {cls:'vf_search_div'});	
 
             for(let id of links)
             {
-                line.createEl('span', {text: id, cls: 'vf_serach_link'});
+                line.createEl('span', {text: id, cls: 'vf_search_link'});
             }
         }
 	}

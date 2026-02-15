@@ -210,7 +210,7 @@ export class VirtFolderSettingTab extends PluginSettingTab
 
 	update_counter()
 	{
-		let count = this.plugin.base.get_filtred_count();
+		let count = this.plugin.base.get_filtered_count();
 		this.counter.setValue(count.toString());
 	}
 

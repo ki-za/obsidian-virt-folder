@@ -85,7 +85,8 @@ export class YamlParser
         }
         else
         {
-            front[prop] = [];
+            front[prop] = [formated_link];
+            this.showMessage(`Set ${prop}: ${link}`);
         }
     }
 

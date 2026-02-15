@@ -3,7 +3,7 @@
     color: var(--text-muted);
 }
 
-.vf_search_link
+.vf_serach_link
 {
     background-color: var(--background-secondary-alt);
     color: var(--text-normal);
@@ -12,13 +12,13 @@
     line-height:2em;
 }
 
-.suggestion-item.is-selected .vf_search_link
+.suggestion-item.is-selected .vf_serach_link
 {
     background-color: var(--background-secondary);
 }
 
 
-.vf_search_div
+.vf_serach_div
 {
     padding-bottom: 1px;
     padding-top: 1px;

@@ -1,11 +1,11 @@
-import { App, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import { BaseScanner } from 'base_scanner';
 
 export class NoteData
 {
     constructor(private base: BaseScanner)
     {
-        // refector later
+
     }
 
     onStartApp()
@@ -15,21 +15,21 @@ export class NoteData
 
     onCreate(file: TFile)
     {
-        this.base.rescan();
+        this.base.add_note(file);
     }
 
-    onChange(file:TFile)
+    onChange(file: TFile)
     {
-        this.base.rescan();      
+        this.base.update_note(file);
     }
 
-    onRename(file:TFile, oldPath:string)
+    onRename(file: TFile, oldPath: string)
     {
-        this.base.rescan();      
+        this.base.rename_note(file, oldPath);
     }
 
     onDelete(file: TFile)
     {
-        this.base.rescan();      
+        this.base.remove_note(file.path);
     }
 }

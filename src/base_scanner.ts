@@ -86,12 +86,12 @@ export class BaseScanner
         this.restore_utime(old_list)
     }
 
-    get_filtred_count()
+    get_filtered_count()
     {
-        return this.app.vault.getMarkdownFiles().length - this.get_filted_list().length;
+        return this.app.vault.getMarkdownFiles().length - this.get_filtered_list().length;
     }
 
-    get_filted_list()
+    get_filtered_list()
     {
         return this.app.vault.getMarkdownFiles().filter( (file) => 
         {
@@ -153,7 +153,7 @@ export class BaseScanner
         this.note_list = {}
 
         // create empty notes
-        for (let file of this.get_filted_list())
+        for (let file of this.get_filtered_list())
         {
             let file_id = file.path
             this.note_list[file_id] = new OneNote(
@@ -163,40 +163,46 @@ export class BaseScanner
         }
     }
 
+    _build_note_links(file: TFile)
+    {
+        let file_id = file.path;
+        if(!(file_id in this.note_list)) return;
+
+        let metadata = this.app.metadataCache.getFileCache(file);
+        if (!metadata) return;
+
+        if(metadata.frontmatterLinks)
+        {
+            for(let link of metadata.frontmatterLinks)
+            {
+                if (!this.test_prop_name(link.key)) continue;
+
+                let link_file = this.app.metadataCache.getFirstLinkpathDest(link.link, '');
+                if(!link_file) continue;
+
+                let link_id = link_file.path;
+                if(!(link_id in this.note_list)) continue;
+
+                this.note_list[file_id].parents.push(link_id);
+                this.note_list[link_id].children.push(file_id);
+            }
+        }
+
+        if(metadata.frontmatter)
+        {
+            if("IsPinned" in metadata.frontmatter)
+            {
+                let value = metadata.frontmatter["IsPinned"];
+                this.note_list[file_id].is_pinned = (value != "0" && value != "false");
+            }
+        }
+    }
+
     build_links()
     {
-        for (let file of this.get_filted_list())
+        for (let file of this.get_filtered_list())
         {
-            let file_id = file.path
-
-            let metadata = this.app.metadataCache.getFileCache(file);
-            if (!metadata) continue;
-			
-            if(metadata.frontmatterLinks)
-            {
-                for(let link of metadata.frontmatterLinks)
-				{
-                    if (!this.test_prop_name(link.key)) continue;
-
-                    let link_file = this.app.metadataCache.getFirstLinkpathDest(link.link, '');
-                    if(!link_file) continue;
-
-                    let link_id = link_file.path;
-                    if(!(link_id in this.note_list)) continue;
-
-                    this.note_list[file_id].parents.push(link_id);
-                    this.note_list[link_id].children.push(file_id);
-                }
-            }
-
-            if(metadata.frontmatter)
-            {
-                if("IsPinned" in metadata.frontmatter)
-                {
-                    let value = metadata.frontmatter["IsPinned"];
-                    this.note_list[file_id].is_pinned = (value != "0" && value != "false");
-                }		
-            }
+            this._build_note_links(file);
         }
     }
 
@@ -389,7 +395,7 @@ export class BaseScanner
     _get_min_path(path_list: string[][])
     {
         let min_path:string[] = [];
-        let min_count = 999;
+        let min_count = Number.MAX_SAFE_INTEGER;
 
         for(let path of path_list)
         {
@@ -445,7 +451,7 @@ export class BaseScanner
         return parent_list;
     }
 
-    _get_shoretest_list(path_list: string[][])
+    _get_shortest_list(path_list: string[][])
     {
         let parent_list = this._split_into_parents(path_list);
         let shortest_list = [];
@@ -465,7 +471,7 @@ export class BaseScanner
         if(!path_list) return undefined;
 
         // remove similar, save shortest
-        path_list = this._get_shoretest_list(path_list);
+        path_list = this._get_shortest_list(path_list);
 
         let old_index = this._array_index(path_list, this.last_active);
         let path = undefined;
@@ -482,5 +488,144 @@ export class BaseScanner
 
         this.last_active = path.slice();
         return path;
+    }
+
+    // --- incremental updates ---
+
+    is_filtered(file: TFile): boolean
+    {
+        for (let filter of this.settings.filter)
+        {
+            if (file.path.startsWith(filter)) return true;
+        }
+        return false;
+    }
+
+    rebuild_top_and_sort()
+    {
+        this.build_top();
+        this.sort_links();
+    }
+
+    _detach_parents(file_id: string)
+    {
+        let note = this.note_by_id(file_id);
+        if(!note) return;
+
+        for (let parent_id of note.parents)
+        {
+            let parent = this.note_by_id(parent_id);
+            if(parent)
+            {
+                parent.children = parent.children.filter(id => id !== file_id);
+            }
+        }
+        note.parents = [];
+        note.is_pinned = false;
+    }
+
+    _detach_children(file_id: string)
+    {
+        let note = this.note_by_id(file_id);
+        if(!note) return;
+
+        for (let child_id of note.children)
+        {
+            let child = this.note_by_id(child_id);
+            if(child)
+            {
+                child.parents = child.parents.filter(id => id !== file_id);
+            }
+        }
+        note.children = [];
+    }
+
+    add_note(file: TFile)
+    {
+        if(this.is_filtered(file)) return;
+
+        let file_id = file.path;
+        this.note_list[file_id] = new OneNote(
+            file_id, file.stat.mtime, file.stat.ctime,
+            file.basename, this.get_note_title(file)
+        );
+
+        this._build_note_links(file);
+        this.rebuild_top_and_sort();
+    }
+
+    remove_note(file_id: string)
+    {
+        let note = this.note_by_id(file_id);
+        if(!note) return;
+
+        this._detach_parents(file_id);
+        this._detach_children(file_id);
+
+        delete this.note_list[file_id];
+        this.rebuild_top_and_sort();
+    }
+
+    rename_note(file: TFile, oldPath: string)
+    {
+        let old_note = this.note_by_id(oldPath);
+        if(!old_note)
+        {
+            this.add_note(file);
+            return;
+        }
+
+        let newPath = file.path;
+
+        // update references in parent notes
+        for (let parent_id of old_note.parents)
+        {
+            let parent = this.note_by_id(parent_id);
+            if(parent)
+            {
+                let idx = parent.children.indexOf(oldPath);
+                if(idx !== -1) parent.children[idx] = newPath;
+            }
+        }
+
+        // update references in child notes
+        for (let child_id of old_note.children)
+        {
+            let child = this.note_by_id(child_id);
+            if(child)
+            {
+                let idx = child.parents.indexOf(oldPath);
+                if(idx !== -1) child.parents[idx] = newPath;
+            }
+        }
+
+        old_note.id = newPath;
+        old_note.name = file.basename;
+        old_note.title = this.get_note_title(file);
+        old_note.mtime = file.stat.mtime;
+
+        delete this.note_list[oldPath];
+        this.note_list[newPath] = old_note;
+
+        this.rebuild_top_and_sort();
+    }
+
+    update_note(file: TFile)
+    {
+        let file_id = file.path;
+        let note = this.note_by_id(file_id);
+        if(!note) return;
+
+        let old_utime = note.utime;
+
+        this._detach_parents(file_id);
+
+        note.mtime = file.stat.mtime;
+        note.title = this.get_note_title(file);
+
+        this._build_note_links(file);
+
+        note.utime = old_utime;
+        this.rebuild_top_and_sort();
     }
 }
