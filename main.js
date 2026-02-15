@@ -3303,7 +3303,9 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       if (this.settings.firstRun) {
         this.settings.firstRun = false;
         this.saveSettings();
-        this.activateView();
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_VF);
+        if (leaves.length === 0)
+          this.activateView();
       }
       this.registerEvent(this.app.metadataCache.on("resolve", this.onResolveMetadata));
       this.registerEvent(this.app.workspace.on("file-open", this.onOpenFile, this));

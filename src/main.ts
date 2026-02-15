@@ -88,7 +88,9 @@ export default class VirtFolderPlugin extends Plugin
 			{
 				this.settings.firstRun = false;
 				this.saveSettings();
-				this.activateView();
+
+				const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_VF);
+				if(leaves.length === 0) this.activateView();
 			}
 
 			this.registerEvent(this.app.metadataCache.on("resolve", this.onResolveMetadata));
