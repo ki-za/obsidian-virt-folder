@@ -18,9 +18,10 @@ export interface VirtFolderSettings
 	sortTreeBy: SortTypes;
 	sortTreeRev: boolean;
 	UseWikiLinks: boolean;
+	confirmDelete: boolean;
 }
 
-export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> = 
+export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
 {
 	ignorePath: '',
 	propertyName: 'Folders',
@@ -29,6 +30,7 @@ export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
 	sortTreeBy: SortTypes.file_name,
 	sortTreeRev: false,
 	UseWikiLinks: true,
+	confirmDelete: true,
 };
 
 export class VirtFolderSettingTab extends PluginSettingTab
@@ -205,7 +207,21 @@ export class VirtFolderSettingTab extends PluginSettingTab
 				this.update_note_list();
 			});
 		});
-		
+
+
+		new Setting(containerEl)
+		.setName("Confirm before deleting")
+		.setDesc("Show confirmation dialog before deleting a note")
+		.addToggle( (tg:ToggleComponent) =>
+		{
+			tg.setValue(this.plugin.settings.confirmDelete);
+			tg.onChange(async (value) =>
+			{
+				this.plugin.settings.confirmDelete = value;
+				await this.plugin.saveSettings();
+			});
+		});
+
 	}
 
 	update_counter()

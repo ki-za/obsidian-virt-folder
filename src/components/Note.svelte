@@ -8,7 +8,7 @@
 
 	import { getPlugin, data, active_id } from "./stores";
 	import { slide } from "svelte/transition";
-	import { getIcon, Notice } from "obsidian";
+	import { getIcon, Notice, Menu } from "obsidian";
 	import { OneNote } from "onenote";
 	import type { Action } from "svelte/action";
 	import { tick } from "svelte";
@@ -153,6 +153,43 @@
 		plugin.moveNoteToFolder(draggedId, oldParentId, newParentId);
 	}
 
+	function handleContextMenu(event: MouseEvent)
+	{
+		if(type !== 'sub_note') return;
+
+		event.preventDefault();
+
+		const menu = new Menu();
+
+		menu.addItem((item) => {
+			item.setTitle('Create note')
+				.setIcon('plus')
+				.onClick(() => {
+					plugin.createNoteInFolder(id);
+				});
+		});
+
+		menu.addItem((item) => {
+			item.setTitle('Create unique note')
+				.setIcon('fingerprint')
+				.onClick(() => {
+					plugin.createNoteInFolder(id, true);
+				});
+		});
+
+		menu.addSeparator();
+
+		menu.addItem((item) => {
+			item.setTitle('Delete note')
+				.setIcon('trash-2')
+				.onClick(() => {
+					plugin.deleteNote(id);
+				});
+		});
+
+		menu.showAtMouseEvent(event);
+	}
+
 	export const focusNotes = async (pathNotes: string[]) =>
 	{
 		isCollapsed = false;
@@ -196,6 +233,7 @@
 		on:dragover|preventDefault={handleDragOver}
 		on:dragleave={handleDragLeave}
 		on:drop={handleDrop}
+		on:contextmenu={handleContextMenu}
 		on:click={(event) =>
 		{
 			if(event.shiftKey)

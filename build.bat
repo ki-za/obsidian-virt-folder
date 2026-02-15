@@ -17,13 +17,11 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo Copying files to release...
+echo Copying files...
 cd /d "%~dp0"
-if not exist release mkdir release
-move /y src\main.js release\main.js
-copy /y src\styles.css release\styles.css
-copy /y manifest.json release\manifest.json
+move /y src\main.js main.js
+copy /y src\styles.css styles.css
 
 echo.
-echo Build complete! Files are in the release folder.
+echo Build complete!
 pause

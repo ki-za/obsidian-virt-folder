@@ -1,4 +1,4 @@
-import { TAbstractFile, Plugin, TFile } from 'obsidian';
+import { TAbstractFile, Plugin, TFile, Notice, Modal, Setting } from 'obsidian';
 import { WorkspaceLeaf } from "obsidian";
 import { data, active_id } from './components/stores';
 import { NoteData } from './data';
@@ -270,6 +270,90 @@ export default class VirtFolderPlugin extends Plugin
 		).open();
 	}
 
+	async createNoteInFolder(parentId: string, unique: boolean = false)
+	{
+		if(unique)
+		{
+			let commands = (this.app as any).commands;
+			if(!commands || !commands.executeCommandById)
+			{
+				this.yaml.showMessage('Commands API is not available');
+				return;
+			}
+
+			let ref = this.app.vault.on('create', async (file) => {
+				if(!(file instanceof TFile)) return;
+				this.app.vault.offref(ref);
+				await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
+					this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
+				});
+
+				let metaRef = this.app.metadataCache.on('resolve', (resolved) => {
+					if(resolved.path !== (file as TFile).path) return;
+					this.app.metadataCache.offref(metaRef);
+					this.update_data();
+					this.VF_RevealActiveFile();
+				});
+			});
+
+			let executed = commands.executeCommandById('zk-prefixer');
+			if(!executed)
+			{
+				this.app.vault.offref(ref);
+				this.yaml.showMessage('Enable "Unique note creator" core plugin');
+			}
+			return;
+		}
+
+		let name = 'Untitled';
+		let counter = 0;
+		let path = `${name}.md`;
+
+		while(this.app.vault.getAbstractFileByPath(path))
+		{
+			counter++;
+			path = `${name} ${counter}.md`;
+		}
+
+		let file = await this.app.vault.create(path, '');
+
+		await this.app.fileManager.processFrontMatter(file, (fm) => {
+			this.yaml._fm_add_link(fm, parentId, this.settings.propertyName);
+		});
+
+		await this.app.workspace.openLinkText(path, path);
+
+		let metaRef = this.app.metadataCache.on('resolve', (resolved) => {
+			if(resolved.path !== path) return;
+			this.app.metadataCache.offref(metaRef);
+			this.update_data();
+			this.VF_RevealActiveFile();
+		});
+	}
+
+	async deleteNote(noteId: string)
+	{
+		let file = this.app.vault.getFileByPath(noteId);
+		if(!file) return;
+
+		let doDelete = async () => {
+			await this.app.vault.trash(file!, true);
+			new Notice('Note deleted');
+			this.update_data();
+		};
+
+		if(this.settings.confirmDelete)
+		{
+			let note = this.base.note_by_id(noteId);
+			let displayName = (note && this.settings.cmdShowTitle) ? note.title : file.basename;
+			new VF_ConfirmModal(this.app, displayName, doDelete).open();
+		}
+		else
+		{
+			await doDelete();
+		}
+	}
+
 	moveNoteToFolder(noteId:string, oldParentId:string|null, newParentId:string|null)
 	{
 		let noteFile = this.app.vault.getFileByPath(noteId);
@@ -284,6 +368,36 @@ export default class VirtFolderPlugin extends Plugin
 		}
 
 		this.update_data();
+	}
+}
+
+class VF_ConfirmModal extends Modal
+{
+	constructor(app: any, private noteName: string, private onConfirm: () => void)
+	{
+		super(app);
+	}
+
+	onOpen()
+	{
+		this.titleEl.setText('Delete note');
+		this.contentEl.createEl('p', {text: `Delete "${this.noteName}"?`});
+
+		new Setting(this.contentEl)
+			.addButton((btn) => {
+				btn.setButtonText('Delete')
+					.setWarning()
+					.onClick(() => {
+						this.close();
+						this.onConfirm();
+					});
+			})
+			.addButton((btn) => {
+				btn.setButtonText('Cancel')
+					.onClick(() => {
+						this.close();
+					});
+			});
 	}
 }
 
