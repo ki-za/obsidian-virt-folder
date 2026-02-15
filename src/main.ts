@@ -158,11 +158,6 @@ export default class VirtFolderPlugin extends Plugin
 	  
 	onResolveMetadata = (file: TFile) =>
 	{
-		if (this.base.is_same_mtime(file))
-		{
-			return; 
-		}
-
 		this.data.onChange(file);
 		this.update_data();
 	};
@@ -223,14 +218,18 @@ export default class VirtFolderPlugin extends Plugin
 		let file = this.app.workspace.getActiveFile();
 		if(!file) return;
 
-		// 1. select file 
+		let excludeIds = this.base.get_all_descendants(file.path);
+		excludeIds.add(file.path);
+
+		// 1. select file
 		new VF_SelectFile(this, (file_id:string) =>
 			{
 				// 2. add to yaml
 				this.yaml.add_link(this.settings.propertyName, file_id);
 				this.updateUsedTime(file_id);
 				this.update_data();
-			}
+			},
+			excludeIds
 		).open();
 	}
 
@@ -238,6 +237,9 @@ export default class VirtFolderPlugin extends Plugin
 	{
 		let file = this.app.workspace.getActiveFile();
 		if(!file) return;
+
+		let excludeIds = this.base.get_all_descendants(file.path);
+		excludeIds.add(file.path);
 
 		// 1. select old link
 		new VF_SelectPropModal (this, this.settings.propertyName, (old_link:string) =>
@@ -249,7 +251,8 @@ export default class VirtFolderPlugin extends Plugin
 						this.yaml.replace_link(this.settings.propertyName, old_link, file_id);
 						this.updateUsedTime(file_id);
 						this.update_data();
-					}
+					},
+					excludeIds
 				).open();
 			}
 		).open();

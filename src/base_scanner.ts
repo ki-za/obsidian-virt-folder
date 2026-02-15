@@ -333,6 +333,30 @@ export class BaseScanner
         }
     }
 
+    get_all_descendants(id: string): Set<string>
+    {
+        let descendants = new Set<string>();
+        let stack = [id];
+
+        while(stack.length > 0)
+        {
+            let currentId = stack.pop()!;
+            let current = this.note_by_id(currentId);
+            if(!current) continue;
+
+            for(let childId of current.children)
+            {
+                if(!descendants.has(childId))
+                {
+                    descendants.add(childId);
+                    stack.push(childId);
+                }
+            }
+        }
+
+        return descendants;
+    }
+
     is_same_mtime(file:TFile)
     {
         let id = file.path;
@@ -610,20 +634,73 @@ export class BaseScanner
         this.rebuild_top_and_sort();
     }
 
+    _read_expected_parents(file: TFile): string[]
+    {
+        let parents: string[] = [];
+        let metadata = this.app.metadataCache.getFileCache(file);
+        if(!metadata || !metadata.frontmatterLinks) return parents;
+
+        for(let link of metadata.frontmatterLinks)
+        {
+            if(!this.test_prop_name(link.key)) continue;
+            let link_file = this.app.metadataCache.getFirstLinkpathDest(link.link, '');
+            if(!link_file) continue;
+            let link_id = link_file.path;
+            if(!(link_id in this.note_list)) continue;
+            parents.push(link_id);
+        }
+        return parents;
+    }
+
+    _read_expected_pinned(file: TFile): boolean
+    {
+        let metadata = this.app.metadataCache.getFileCache(file);
+        if(!metadata || !metadata.frontmatter) return false;
+        if(!("IsPinned" in metadata.frontmatter)) return false;
+        let value = metadata.frontmatter["IsPinned"];
+        return (value != "0" && value != "false");
+    }
+
+    _arrays_equal(a: string[], b: string[]): boolean
+    {
+        if(a.length !== b.length) return false;
+        for(let i = 0; i < a.length; i++)
+        {
+            if(a[i] !== b[i]) return false;
+        }
+        return true;
+    }
+
     update_note(file: TFile)
     {
         let file_id = file.path;
         let note = this.note_by_id(file_id);
         if(!note) return;
 
-        let old_utime = note.utime;
+        let expected_parents = this._read_expected_parents(file);
+        let expected_pinned = this._read_expected_pinned(file);
+        let expected_title = this.get_note_title(file);
 
+        if(note.mtime == file.stat.mtime &&
+           note.title == expected_title &&
+           note.is_pinned == expected_pinned &&
+           this._arrays_equal(note.parents, expected_parents))
+        {
+            return;
+        }
+
+        let old_utime = note.utime;
         this._detach_parents(file_id);
 
         note.mtime = file.stat.mtime;
-        note.title = this.get_note_title(file);
+        note.title = expected_title;
+        note.is_pinned = expected_pinned;
 
-        this._build_note_links(file);
+        for(let parent_id of expected_parents)
+        {
+            note.parents.push(parent_id);
+            this.note_list[parent_id].children.push(file_id);
+        }
 
         note.utime = old_utime;
         this.rebuild_top_and_sort();

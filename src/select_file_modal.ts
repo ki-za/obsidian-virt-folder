@@ -14,7 +14,7 @@ export class VF_SelectFile extends FuzzySuggestModal<ShowedItem>
 {
 	selected: string = '';
 
-	constructor(private plugin: VirtFolderPlugin, private onSubmit: (result: string) => void)
+	constructor(private plugin: VirtFolderPlugin, private onSubmit: (result: string) => void, private excludeIds?: Set<string>)
 	{
 		super(plugin.app);
 		this.setPlaceholder('Type note\'s title');
@@ -32,11 +32,12 @@ export class VF_SelectFile extends FuzzySuggestModal<ShowedItem>
 	}
 
 	getItems(): ShowedItem[]
-	{	
+	{
 		let notes: ShowedItem[] = [];
 
 		for (let id in this.plugin.base.note_list)
 		{
+			if(this.excludeIds && this.excludeIds.has(id)) continue;
 			notes.push(this.plugin.base.note_list[id]);
 		}
 

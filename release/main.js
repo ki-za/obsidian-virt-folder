@@ -1578,6 +1578,23 @@ var BaseScanner = class {
       return this.note_list[id];
     }
   }
+  get_all_descendants(id) {
+    let descendants = /* @__PURE__ */ new Set();
+    let stack = [id];
+    while (stack.length > 0) {
+      let currentId = stack.pop();
+      let current = this.note_by_id(currentId);
+      if (!current)
+        continue;
+      for (let childId of current.children) {
+        if (!descendants.has(childId)) {
+          descendants.add(childId);
+          stack.push(childId);
+        }
+      }
+    }
+    return descendants;
+  }
   is_same_mtime(file) {
     let id = file.path;
     let note = this.note_by_id(id);
@@ -1777,16 +1794,62 @@ var BaseScanner = class {
     this.note_list[newPath] = old_note;
     this.rebuild_top_and_sort();
   }
+  _read_expected_parents(file) {
+    let parents = [];
+    let metadata = this.app.metadataCache.getFileCache(file);
+    if (!metadata || !metadata.frontmatterLinks)
+      return parents;
+    for (let link of metadata.frontmatterLinks) {
+      if (!this.test_prop_name(link.key))
+        continue;
+      let link_file = this.app.metadataCache.getFirstLinkpathDest(link.link, "");
+      if (!link_file)
+        continue;
+      let link_id = link_file.path;
+      if (!(link_id in this.note_list))
+        continue;
+      parents.push(link_id);
+    }
+    return parents;
+  }
+  _read_expected_pinned(file) {
+    let metadata = this.app.metadataCache.getFileCache(file);
+    if (!metadata || !metadata.frontmatter)
+      return false;
+    if (!("IsPinned" in metadata.frontmatter))
+      return false;
+    let value = metadata.frontmatter["IsPinned"];
+    return value != "0" && value != "false";
+  }
+  _arrays_equal(a, b) {
+    if (a.length !== b.length)
+      return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i])
+        return false;
+    }
+    return true;
+  }
   update_note(file) {
     let file_id = file.path;
     let note = this.note_by_id(file_id);
     if (!note)
       return;
+    let expected_parents = this._read_expected_parents(file);
+    let expected_pinned = this._read_expected_pinned(file);
+    let expected_title = this.get_note_title(file);
+    if (note.mtime == file.stat.mtime && note.title == expected_title && note.is_pinned == expected_pinned && this._arrays_equal(note.parents, expected_parents)) {
+      return;
+    }
     let old_utime = note.utime;
     this._detach_parents(file_id);
     note.mtime = file.stat.mtime;
-    note.title = this.get_note_title(file);
-    this._build_note_links(file);
+    note.title = expected_title;
+    note.is_pinned = expected_pinned;
+    for (let parent_id of expected_parents) {
+      note.parents.push(parent_id);
+      this.note_list[parent_id].children.push(file_id);
+    }
     note.utime = old_utime;
     this.rebuild_top_and_sort();
   }
@@ -1795,10 +1858,11 @@ var BaseScanner = class {
 // select_file_modal.ts
 var import_obsidian2 = require("obsidian");
 var VF_SelectFile = class extends import_obsidian2.FuzzySuggestModal {
-  constructor(plugin2, onSubmit) {
+  constructor(plugin2, onSubmit, excludeIds) {
     super(plugin2.app);
     this.plugin = plugin2;
     this.onSubmit = onSubmit;
+    this.excludeIds = excludeIds;
     this.selected = "";
     this.setPlaceholder("Type note's title");
   }
@@ -1813,6 +1877,8 @@ var VF_SelectFile = class extends import_obsidian2.FuzzySuggestModal {
   getItems() {
     let notes = [];
     for (let id in this.plugin.base.note_list) {
+      if (this.excludeIds && this.excludeIds.has(id))
+        continue;
       notes.push(this.plugin.base.note_list[id]);
     }
     notes.sort(function(a, b) {
@@ -2575,8 +2641,10 @@ function instance($$self, $$props, $$invalidate) {
     }
     let draggedId = dragData.id;
     let oldParentId = dragData.parentId;
-    if (draggedId === id)
+    if (draggedId === id || node_path.includes(draggedId)) {
+      new import_obsidian4.Notice("Can't move a folder into itself");
       return;
+    }
     let newParentId = null;
     if (type === "sub_note")
       newParentId = id;
@@ -3133,9 +3201,6 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       }
     };
     this.onResolveMetadata = (file) => {
-      if (this.base.is_same_mtime(file)) {
-        return;
-      }
       this.data.onChange(file);
       this.update_data();
     };
@@ -3264,19 +3329,24 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
     let file = this.app.workspace.getActiveFile();
     if (!file)
       return;
+    let excludeIds = this.base.get_all_descendants(file.path);
+    excludeIds.add(file.path);
     new VF_SelectFile(
       this,
       (file_id) => {
         this.yaml.add_link(this.settings.propertyName, file_id);
         this.updateUsedTime(file_id);
         this.update_data();
-      }
+      },
+      excludeIds
     ).open();
   }
   VF_MoveFolder() {
     let file = this.app.workspace.getActiveFile();
     if (!file)
       return;
+    let excludeIds = this.base.get_all_descendants(file.path);
+    excludeIds.add(file.path);
     new VF_SelectPropModal(
       this,
       this.settings.propertyName,
@@ -3287,7 +3357,8 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
             this.yaml.replace_link(this.settings.propertyName, old_link, file_id);
             this.updateUsedTime(file_id);
             this.update_data();
-          }
+          },
+          excludeIds
         ).open();
       }
     ).open();

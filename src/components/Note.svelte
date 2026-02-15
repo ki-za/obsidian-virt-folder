@@ -8,7 +8,7 @@
 
 	import { getPlugin, data, active_id } from "./stores";
 	import { slide } from "svelte/transition";
-	import { getIcon } from "obsidian";
+	import { getIcon, Notice } from "obsidian";
 	import { OneNote } from "onenote";
 	import type { Action } from "svelte/action";
 	import { tick } from "svelte";
@@ -139,7 +139,11 @@
 		let draggedId: string = dragData.id;
 		let oldParentId: string|null = dragData.parentId;
 
-		if(draggedId === id) return;
+		if(draggedId === id || node_path.includes(draggedId))
+		{
+			new Notice("Can't move a folder into itself");
+			return;
+		}
 
 		let newParentId: string|null = null;
 		if(type === 'sub_note') newParentId = id;
