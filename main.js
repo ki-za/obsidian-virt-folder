@@ -1124,16 +1124,16 @@ var NoteData = class {
     this.base.rescan();
   }
   onCreate(file) {
-    this.base.rescan();
+    this.base.add_note(file);
   }
   onChange(file) {
-    this.base.rescan();
+    this.base.update_note(file);
   }
   onRename(file, oldPath) {
-    this.base.rescan();
+    this.base.rename_note(file, oldPath);
   }
   onDelete(file) {
-    this.base.rescan();
+    this.base.remove_note(file.path);
   }
 };
 
@@ -1155,7 +1155,6 @@ var OneNote = class {
     this.parents = [];
     this.children = [];
     this.is_pinned = false;
-    this.link = "";
     this.mtime = 0;
     this.utime = 0;
   }
@@ -1287,7 +1286,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
     });
   }
   update_counter() {
-    let count = this.plugin.base.get_filtred_count();
+    let count = this.plugin.base.get_filtered_count();
     this.counter.setValue(count.toString());
   }
   update_note_list() {
@@ -1305,7 +1304,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
     return name === "";
   }
   is_valid_prop_name(name) {
-    let regexp = /^[\w.-]+$/;
+    let regexp = /^[\p{L}\p{N}_.-]+$/u;
     return regexp.test(name);
   }
   update_prop_name(name) {
@@ -1391,10 +1390,10 @@ var BaseScanner = class {
     this.sort_links();
     this.restore_utime(old_list);
   }
-  get_filtred_count() {
-    return this.app.vault.getMarkdownFiles().length - this.get_filted_list().length;
+  get_filtered_count() {
+    return this.app.vault.getMarkdownFiles().length - this.get_filtered_list().length;
   }
-  get_filted_list() {
+  get_filtered_list() {
     return this.app.vault.getMarkdownFiles().filter((file) => {
       for (let filter of this.settings.filter) {
         if (file.path.startsWith(filter))
@@ -1438,7 +1437,7 @@ var BaseScanner = class {
   }
   init_note_list() {
     this.note_list = {};
-    for (let file of this.get_filted_list()) {
+    for (let file of this.get_filtered_list()) {
       let file_id = file.path;
       this.note_list[file_id] = new OneNote(
         file_id,
@@ -1449,32 +1448,37 @@ var BaseScanner = class {
       );
     }
   }
+  _build_note_links(file) {
+    let file_id = file.path;
+    if (!(file_id in this.note_list))
+      return;
+    let metadata = this.app.metadataCache.getFileCache(file);
+    if (!metadata)
+      return;
+    if (metadata.frontmatterLinks) {
+      for (let link of metadata.frontmatterLinks) {
+        if (!this.test_prop_name(link.key))
+          continue;
+        let link_file = this.app.metadataCache.getFirstLinkpathDest(link.link, "");
+        if (!link_file)
+          continue;
+        let link_id = link_file.path;
+        if (!(link_id in this.note_list))
+          continue;
+        this.note_list[file_id].parents.push(link_id);
+        this.note_list[link_id].children.push(file_id);
+      }
+    }
+    if (metadata.frontmatter) {
+      if ("IsPinned" in metadata.frontmatter) {
+        let value = metadata.frontmatter["IsPinned"];
+        this.note_list[file_id].is_pinned = value != "0" && value != "false";
+      }
+    }
+  }
   build_links() {
-    for (let file of this.get_filted_list()) {
-      let file_id = file.path;
-      let metadata = this.app.metadataCache.getFileCache(file);
-      if (!metadata)
-        continue;
-      if (metadata.frontmatterLinks) {
-        for (let link of metadata.frontmatterLinks) {
-          if (!this.test_prop_name(link.key))
-            continue;
-          let link_file = this.app.metadataCache.getFirstLinkpathDest(link.link, "");
-          if (!link_file)
-            continue;
-          let link_id = link_file.path;
-          if (!(link_id in this.note_list))
-            continue;
-          this.note_list[file_id].parents.push(link_id);
-          this.note_list[link_id].children.push(file_id);
-        }
-      }
-      if (metadata.frontmatter) {
-        if ("IsPinned" in metadata.frontmatter) {
-          let value = metadata.frontmatter["IsPinned"];
-          this.note_list[file_id].is_pinned = value != "0" && value != "false";
-        }
-      }
+    for (let file of this.get_filtered_list()) {
+      this._build_note_links(file);
     }
   }
   is_orphan(note) {
@@ -1612,7 +1616,7 @@ var BaseScanner = class {
   }
   _get_min_path(path_list) {
     let min_path = [];
-    let min_count = 999;
+    let min_count = Number.MAX_SAFE_INTEGER;
     for (let path of path_list) {
       let len = path.length;
       if (len < min_count) {
@@ -1651,7 +1655,7 @@ var BaseScanner = class {
     }
     return parent_list;
   }
-  _get_shoretest_list(path_list) {
+  _get_shortest_list(path_list) {
     let parent_list = this._split_into_parents(path_list);
     let shortest_list = [];
     for (let parent in parent_list) {
@@ -1664,7 +1668,7 @@ var BaseScanner = class {
     let path_list = this.build_path_list(id);
     if (!path_list)
       return void 0;
-    path_list = this._get_shoretest_list(path_list);
+    path_list = this._get_shortest_list(path_list);
     let old_index = this._array_index(path_list, this.last_active);
     let path = void 0;
     if (old_index === void 0) {
@@ -1675,6 +1679,110 @@ var BaseScanner = class {
     }
     this.last_active = path.slice();
     return path;
+  }
+  // --- incremental updates ---
+  is_filtered(file) {
+    for (let filter of this.settings.filter) {
+      if (file.path.startsWith(filter))
+        return true;
+    }
+    return false;
+  }
+  rebuild_top_and_sort() {
+    this.build_top();
+    this.sort_links();
+  }
+  _detach_parents(file_id) {
+    let note = this.note_by_id(file_id);
+    if (!note)
+      return;
+    for (let parent_id of note.parents) {
+      let parent = this.note_by_id(parent_id);
+      if (parent) {
+        parent.children = parent.children.filter((id) => id !== file_id);
+      }
+    }
+    note.parents = [];
+    note.is_pinned = false;
+  }
+  _detach_children(file_id) {
+    let note = this.note_by_id(file_id);
+    if (!note)
+      return;
+    for (let child_id of note.children) {
+      let child = this.note_by_id(child_id);
+      if (child) {
+        child.parents = child.parents.filter((id) => id !== file_id);
+      }
+    }
+    note.children = [];
+  }
+  add_note(file) {
+    if (this.is_filtered(file))
+      return;
+    let file_id = file.path;
+    this.note_list[file_id] = new OneNote(
+      file_id,
+      file.stat.mtime,
+      file.stat.ctime,
+      file.basename,
+      this.get_note_title(file)
+    );
+    this._build_note_links(file);
+    this.rebuild_top_and_sort();
+  }
+  remove_note(file_id) {
+    let note = this.note_by_id(file_id);
+    if (!note)
+      return;
+    this._detach_parents(file_id);
+    this._detach_children(file_id);
+    delete this.note_list[file_id];
+    this.rebuild_top_and_sort();
+  }
+  rename_note(file, oldPath) {
+    let old_note = this.note_by_id(oldPath);
+    if (!old_note) {
+      this.add_note(file);
+      return;
+    }
+    let newPath = file.path;
+    for (let parent_id of old_note.parents) {
+      let parent = this.note_by_id(parent_id);
+      if (parent) {
+        let idx = parent.children.indexOf(oldPath);
+        if (idx !== -1)
+          parent.children[idx] = newPath;
+      }
+    }
+    for (let child_id of old_note.children) {
+      let child = this.note_by_id(child_id);
+      if (child) {
+        let idx = child.parents.indexOf(oldPath);
+        if (idx !== -1)
+          child.parents[idx] = newPath;
+      }
+    }
+    old_note.id = newPath;
+    old_note.name = file.basename;
+    old_note.title = this.get_note_title(file);
+    old_note.mtime = file.stat.mtime;
+    delete this.note_list[oldPath];
+    this.note_list[newPath] = old_note;
+    this.rebuild_top_and_sort();
+  }
+  update_note(file) {
+    let file_id = file.path;
+    let note = this.note_by_id(file_id);
+    if (!note)
+      return;
+    let old_utime = note.utime;
+    this._detach_parents(file_id);
+    note.mtime = file.stat.mtime;
+    note.title = this.get_note_title(file);
+    this._build_note_links(file);
+    note.utime = old_utime;
+    this.rebuild_top_and_sort();
   }
 };
 
@@ -1687,8 +1795,6 @@ var VF_SelectFile = class extends import_obsidian2.FuzzySuggestModal {
     this.onSubmit = onSubmit;
     this.selected = "";
     this.setPlaceholder("Type note's title");
-  }
-  getAliases(note) {
   }
   getItemName(item) {
     if (this.plugin.settings.cmdShowTitle)
@@ -1726,10 +1832,12 @@ var VF_SelectFile = class extends import_obsidian2.FuzzySuggestModal {
     let small = el.createEl("small", { cls: "vf_search_parents" });
     for (let parent of item.item.parents) {
       let path = this.plugin.base.get_shortest_path(parent);
+      if (!path)
+        continue;
       let links = this._format_parents(path);
-      let line = small.createEl("div", { cls: "vf_serach_div" });
+      let line = small.createEl("div", { cls: "vf_search_div" });
       for (let id of links) {
-        line.createEl("span", { text: id, cls: "vf_serach_link" });
+        line.createEl("span", { text: id, cls: "vf_search_link" });
       }
     }
   }
@@ -2814,7 +2922,8 @@ var YamlParser = class {
       front[prop][i] = formated_link;
       this.showMessage(`Set ${prop}: ${link}`);
     } else {
-      front[prop] = [];
+      front[prop] = [formated_link];
+      this.showMessage(`Set ${prop}: ${link}`);
     }
   }
   replace_link(yamlProp, old_link, file_id) {
