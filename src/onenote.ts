@@ -1,7 +1,6 @@
 export class OneNote
 {
     id: string; // file.path
-    link: string;
     name: string;
     title: string;
     mtime: number;
@@ -26,8 +25,7 @@ export class OneNote
         this.parents = [];
         this.children = [];
         this.is_pinned = false;
-        this.link = '';
-        this.mtime = 0; 
+        this.mtime = 0;
         this.utime = 0;
     }
 

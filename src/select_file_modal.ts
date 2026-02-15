@@ -1,5 +1,4 @@
 import { App, FuzzySuggestModal, Notice, FuzzyMatch } from 'obsidian';
-import { OneNote } from 'onenote';
 import  VirtFolderPlugin  from 'main';
 
 interface ShowedItem
@@ -19,11 +18,6 @@ export class VF_SelectFile extends FuzzySuggestModal<ShowedItem>
 	{
 		super(plugin.app);
 		this.setPlaceholder('Type note\'s title');
-	}
-
-	getAliases(note: OneNote)
-	{
-		// next time			
 	}
 
 	getItemName(item: ShowedItem)
@@ -77,7 +71,8 @@ export class VF_SelectFile extends FuzzySuggestModal<ShowedItem>
 
         for(let parent of item.item.parents)
         {
-            let path: any = this.plugin.base.get_shortest_path(parent);
+            let path = this.plugin.base.get_shortest_path(parent);
+            if(!path) continue;
             let links = this._format_parents(path);
             let line = small.createEl('div', {cls:'vf_search_div'});	
 

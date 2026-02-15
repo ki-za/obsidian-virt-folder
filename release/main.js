@@ -1155,7 +1155,6 @@ var OneNote = class {
     this.parents = [];
     this.children = [];
     this.is_pinned = false;
-    this.link = "";
     this.mtime = 0;
     this.utime = 0;
   }
@@ -1797,8 +1796,6 @@ var VF_SelectFile = class extends import_obsidian2.FuzzySuggestModal {
     this.selected = "";
     this.setPlaceholder("Type note's title");
   }
-  getAliases(note) {
-  }
   getItemName(item) {
     if (this.plugin.settings.cmdShowTitle)
       return item.title;
@@ -1835,6 +1832,8 @@ var VF_SelectFile = class extends import_obsidian2.FuzzySuggestModal {
     let small = el.createEl("small", { cls: "vf_search_parents" });
     for (let parent of item.item.parents) {
       let path = this.plugin.base.get_shortest_path(parent);
+      if (!path)
+        continue;
       let links = this._format_parents(path);
       let line = small.createEl("div", { cls: "vf_search_div" });
       for (let id of links) {
