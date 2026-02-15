@@ -19,6 +19,7 @@ export interface VirtFolderSettings
 	sortTreeRev: boolean;
 	UseWikiLinks: boolean;
 	confirmDelete: boolean;
+	firstRun: boolean;
 }
 
 export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
@@ -31,6 +32,7 @@ export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
 	sortTreeRev: false,
 	UseWikiLinks: true,
 	confirmDelete: true,
+	firstRun: true,
 };
 
 export class VirtFolderSettingTab extends PluginSettingTab

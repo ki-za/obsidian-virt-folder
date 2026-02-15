@@ -78,11 +78,18 @@ export default class VirtFolderPlugin extends Plugin
 			},
 		});
 
-		this.app.workspace.onLayoutReady(() => 
+		this.app.workspace.onLayoutReady(() =>
 		{
 			// reactive
 			this.data.onStartApp();
 			this.update_data();
+
+			if(this.settings.firstRun)
+			{
+				this.settings.firstRun = false;
+				this.saveSettings();
+				this.activateView();
+			}
 
 			this.registerEvent(this.app.metadataCache.on("resolve", this.onResolveMetadata));
 			this.registerEvent(this.app.workspace.on("file-open", this.onOpenFile, this));
