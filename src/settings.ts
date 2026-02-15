@@ -238,7 +238,7 @@ export class VirtFolderSettingTab extends PluginSettingTab
 
 	is_valid_prop_name(name:string): boolean
 	{
-		let regexp = /^[\w.-]+$/;
+		let regexp = /^[\p{L}\p{N}_.-]+$/u;
 		return regexp.test(name);
 	}
 

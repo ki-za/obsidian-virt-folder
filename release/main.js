@@ -1304,7 +1304,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
     return name === "";
   }
   is_valid_prop_name(name) {
-    let regexp = /^[\w.-]+$/;
+    let regexp = /^[\p{L}\p{N}_.-]+$/u;
     return regexp.test(name);
   }
   update_prop_name(name) {
