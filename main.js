@@ -2072,7 +2072,7 @@ function slide(node, { delay = 0, duration = 400, easing = cubicOut, axis = "y" 
 // components/Note.svelte
 var import_obsidian4 = require("obsidian");
 function add_css(target) {
-  append_styles(target, "svelte-1vnna74", ".counter.svelte-1vnna74{text-align:right;margin-left:auto;background-color:var(--background-secondary-alt);position:sticky;top:0;color:var(--text-normal);padding:2px 4px}.current_note.svelte-1vnna74{background-color:var(--background-secondary-alt)}.vf-drop-target.svelte-1vnna74{background-color:var(--interactive-accent);opacity:0.85;border-radius:4px}");
+  append_styles(target, "svelte-18allk4", ".counter.svelte-18allk4{text-align:right;margin-left:auto;background-color:var(--background-modifier-border);position:sticky;top:0;color:var(--text-normal);padding:2px 4px}.current_note.svelte-18allk4{background-color:var(--background-modifier-border)}.vf-drop-target.svelte-18allk4{background-color:var(--interactive-accent);opacity:0.85;border-radius:4px}");
 }
 function get_each_context(ctx, list, i) {
   const child_ctx = ctx.slice();
@@ -2141,7 +2141,7 @@ function create_if_block_1(ctx) {
         /*childCounter*/
         ctx[5]
       );
-      attr(span, "class", "counter svelte-1vnna74");
+      attr(span, "class", "counter svelte-18allk4");
     },
     m(target, anchor) {
       insert(target, span, anchor);
@@ -2404,7 +2404,7 @@ function create_fragment(ctx) {
         if_block2.c();
       attr(div0, "class", "tree-item-inner");
       attr(div1, "class", div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx[4] ? "current_note" : "") + " svelte-1vnna74");
+      (ctx[4] ? "current_note" : "") + " svelte-18allk4");
       attr(div1, "draggable", div1_draggable_value = /*type*/
       ctx[1] === "sub_note");
       toggle_class(
@@ -2511,7 +2511,7 @@ function create_fragment(ctx) {
       }
       if (!current || dirty[0] & /*IsOpened*/
       16 && div1_class_value !== (div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx2[4] ? "current_note" : "") + " svelte-1vnna74")) {
+      (ctx2[4] ? "current_note" : "") + " svelte-18allk4")) {
         attr(div1, "class", div1_class_value);
       }
       if (!current || dirty[0] & /*type*/

@@ -307,7 +307,7 @@
    	.counter {
         text-align: right;
         margin-left: auto;
-		background-color: var(--background-secondary-alt);
+		background-color: var(--background-modifier-border);
 		position: sticky;
 		top: 0;
 		color: var(--text-normal);
@@ -316,7 +316,7 @@
 
 	.current_note
 	{
-		background-color: var(--background-secondary-alt);
+		background-color: var(--background-modifier-border);
 	}
 
 	.vf-drop-target
