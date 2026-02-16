@@ -17,9 +17,30 @@
     background-color: var(--background-secondary);
 }
 
-
 .vf_search_div
 {
     padding-bottom: 1px;
     padding-top: 1px;
+}
+
+.vf-counter {
+    text-align: right;
+    margin-left: auto;
+    background-color: var(--background-modifier-border);
+    position: sticky;
+    top: 0;
+    color: var(--text-normal);
+    padding: 2px 4px;
+}
+
+.vf-current-note
+{
+    background-color: var(--background-modifier-border);
+}
+
+.vf-drop-target
+{
+    background-color: var(--interactive-accent);
+    opacity: 0.85;
+    border-radius: 4px;
 }

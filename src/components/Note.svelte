@@ -231,7 +231,7 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
 	<div
-		class="tree-item-self is-clickable mod-collapsible {IsOpened ? 'current_note' : ''}"
+		class="tree-item-self is-clickable mod-collapsible {IsOpened ? 'vf-current-note' : ''}"
 		class:vf-drop-target={isDragOver}
 		draggable={type === 'sub_note'}
 		on:dragstart={handleDragStart}
@@ -275,7 +275,7 @@
 		</div>
 
     {#if childCounter > 0}
-        <span class="counter">
+        <span class="vf-counter">
             {childCounter}
         </span>
     {/if}
@@ -301,29 +301,3 @@
 		</div>
 	{/if}
 </div>
-
-
-<style>
-   	.counter {
-        text-align: right;
-        margin-left: auto;
-		background-color: var(--background-modifier-border);
-		position: sticky;
-		top: 0;
-		color: var(--text-normal);
-        padding: 2px 4px;
-	}
-
-	.current_note
-	{
-		background-color: var(--background-modifier-border);
-	}
-
-	.vf-drop-target
-	{
-		background-color: var(--interactive-accent);
-		opacity: 0.85;
-		border-radius: 4px;
-	}
-
-</style>

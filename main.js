@@ -174,15 +174,6 @@ function end_hydrating() {
 function append(target, node) {
   target.appendChild(node);
 }
-function append_styles(target, style_sheet_id, styles) {
-  const append_styles_to = get_root_for_style(target);
-  if (!append_styles_to.getElementById(style_sheet_id)) {
-    const style = element("style");
-    style.id = style_sheet_id;
-    style.textContent = styles;
-    append_stylesheet(append_styles_to, style);
-  }
-}
 function get_root_for_style(node) {
   if (!node)
     return document;
@@ -757,7 +748,7 @@ function make_dirty(component, i) {
   }
   component.$$.dirty[i / 31 | 0] |= 1 << i % 31;
 }
-function init(component, options, instance3, create_fragment3, not_equal, props, append_styles2 = null, dirty = [-1]) {
+function init(component, options, instance3, create_fragment3, not_equal, props, append_styles = null, dirty = [-1]) {
   const parent_component = current_component;
   set_current_component(component);
   const $$ = component.$$ = {
@@ -781,7 +772,7 @@ function init(component, options, instance3, create_fragment3, not_equal, props,
     skip_bound: false,
     root: options.target || parent_component.$$.root
   };
-  append_styles2 && append_styles2($$.root);
+  append_styles && append_styles($$.root);
   let ready = false;
   $$.ctx = instance3 ? instance3(component, options.props || {}, (i, ret, ...rest) => {
     const value = rest.length ? rest[0] : ret;
@@ -2071,9 +2062,6 @@ function slide(node, { delay = 0, duration = 400, easing = cubicOut, axis = "y" 
 
 // components/Note.svelte
 var import_obsidian4 = require("obsidian");
-function add_css(target) {
-  append_styles(target, "svelte-18allk4", ".counter.svelte-18allk4{text-align:right;margin-left:auto;background-color:var(--background-modifier-border);position:sticky;top:0;color:var(--text-normal);padding:2px 4px}.current_note.svelte-18allk4{background-color:var(--background-modifier-border)}.vf-drop-target.svelte-18allk4{background-color:var(--interactive-accent);opacity:0.85;border-radius:4px}");
-}
 function get_each_context(ctx, list, i) {
   const child_ctx = ctx.slice();
   child_ctx[34] = list[i];
@@ -2141,7 +2129,7 @@ function create_if_block_1(ctx) {
         /*childCounter*/
         ctx[5]
       );
-      attr(span, "class", "counter svelte-18allk4");
+      attr(span, "class", "vf-counter");
     },
     m(target, anchor) {
       insert(target, span, anchor);
@@ -2404,7 +2392,7 @@ function create_fragment(ctx) {
         if_block2.c();
       attr(div0, "class", "tree-item-inner");
       attr(div1, "class", div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx[4] ? "current_note" : "") + " svelte-18allk4");
+      (ctx[4] ? "vf-current-note" : ""));
       attr(div1, "draggable", div1_draggable_value = /*type*/
       ctx[1] === "sub_note");
       toggle_class(
@@ -2511,7 +2499,7 @@ function create_fragment(ctx) {
       }
       if (!current || dirty[0] & /*IsOpened*/
       16 && div1_class_value !== (div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx2[4] ? "current_note" : "") + " svelte-18allk4")) {
+      (ctx2[4] ? "vf-current-note" : ""))) {
         attr(div1, "class", div1_class_value);
       }
       if (!current || dirty[0] & /*type*/
@@ -2821,7 +2809,7 @@ var Note = class extends SvelteComponent {
         node_path: 20,
         focusNotes: 21
       },
-      add_css,
+      null,
       [-1, -1]
     );
   }
