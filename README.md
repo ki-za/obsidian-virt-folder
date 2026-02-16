@@ -7,11 +7,12 @@ Allows you to quickly find notes by navigating the knowledge base like a book ta
 
 ## Features
 
-- the ability to perform all operations using hot keys
-- dragging and dropping notes with the mouse
-- creating and deleting notes via the right-click menu
-- сreate notes via Unique note creator
-- database optimization
+- The ability to perform all operations using hot keys
+- Dragging and dropping notes with the mouse
+- Creating and deleting notes via the right-click menu
+- Create notes via Unique note creator
+- Front Matter Title plugin support
+- Database optimization
 
 ## Example
 
