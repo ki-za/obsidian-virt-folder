@@ -5,6 +5,14 @@ Allows you to quickly find notes by navigating the knowledge base like a book ta
 
 ![virt_folder_example](./Images/virt_folder_example.png)
 
+## Features
+
+- the ability to perform all operations using hot keys
+- dragging and dropping notes with the mouse
+- creating and deleting notes via the right-click menu
+- сreate notes via Unique note creator
+- database optimization
+
 ## Example
 
 https://github.com/user-attachments/assets/a4990b31-c8ea-48c8-815a-98521d81fc7d
