@@ -5,6 +5,11 @@ Allows you to quickly find notes by navigating the knowledge base like a book ta
 
 ![virt_folder_example](./Images/virt_folder_example.png)
 
+## Overview
+
+- [Russian](https://habr.com/ru/articles/1000254/)
+- [English](https://habr.com/ru/articles/1000502/)
+
 ## Features
 
 - The ability to perform all operations using hot keys
@@ -23,9 +28,4 @@ The current version adds a setting for YAML fields and ignored directories.
 ## Documentation
 
 The current documentation for the [plugin](https://github.com/gr0grig/obsidian-virt-folder/) is located on [GitBook](https://virtfolder.gitbook.io/index)
-
-## TLDR
-
-- [Russian](https://habr.com/ru/articles/1000254/)
-- [English](https://habr.com/ru/articles/1000502/)
 
