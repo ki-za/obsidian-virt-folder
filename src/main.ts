@@ -132,9 +132,15 @@ export default class VirtFolderPlugin extends Plugin
 		this.updateActiveFile();
 	}
 
-	onOpenFile = (file: TFile | null) => 
+	onOpenFile = (file: TFile | null) =>
 	{
 		this.setActiveFile(file);
+
+		if(this.settings.autoReveal && file)
+		{
+			let path = this.base.get_next_path(file.path);
+			if(path) this.revealFile(path);
+		}
 	};
 	
 	onCreateFile = (file: TAbstractFile) => 

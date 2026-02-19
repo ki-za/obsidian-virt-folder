@@ -19,6 +19,7 @@ export interface VirtFolderSettings
 	sortTreeRev: boolean;
 	UseWikiLinks: boolean;
 	confirmDelete: boolean;
+	autoReveal: boolean;
 	firstRun: boolean;
 }
 
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
 	sortTreeRev: false,
 	UseWikiLinks: true,
 	confirmDelete: true,
+	autoReveal: false,
 	firstRun: true,
 };
 
@@ -220,6 +222,20 @@ export class VirtFolderSettingTab extends PluginSettingTab
 			tg.onChange(async (value) =>
 			{
 				this.plugin.settings.confirmDelete = value;
+				await this.plugin.saveSettings();
+			});
+		});
+
+
+		new Setting(containerEl)
+		.setName("Auto reveal active file")
+		.setDesc("Automatically reveal the active file in the tree when opening any file")
+		.addToggle( (tg:ToggleComponent) =>
+		{
+			tg.setValue(this.plugin.settings.autoReveal);
+			tg.onChange(async (value) =>
+			{
+				this.plugin.settings.autoReveal = value;
 				await this.plugin.saveSettings();
 			});
 		});
