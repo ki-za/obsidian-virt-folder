@@ -2664,6 +2664,7 @@ function instance($$self, $$props, $$invalidate) {
     plugin2.moveNoteToFolder(draggedId, oldParentId, newParentId);
   }
   function handleContextMenu(event) {
+    var _a, _b;
     if (type !== "sub_note" && type !== "top_dir")
       return;
     event.preventDefault();
@@ -2674,11 +2675,13 @@ function instance($$self, $$props, $$invalidate) {
         plugin2.createNoteInFolder(folderId);
       });
     });
-    menu.addItem((item) => {
-      item.setTitle("Create unique note").setIcon("fingerprint").onClick(() => {
-        plugin2.createNoteInFolder(folderId, true);
+    if ((_b = (_a = plugin2.app.internalPlugins) === null || _a === void 0 ? void 0 : _a.getPluginById("zk-prefixer")) === null || _b === void 0 ? void 0 : _b.enabled) {
+      menu.addItem((item) => {
+        item.setTitle("Create unique note").setIcon("fingerprint").onClick(() => {
+          plugin2.createNoteInFolder(folderId, true);
+        });
       });
-    });
+    }
     if (type === "sub_note") {
       menu.addSeparator();
       menu.addItem((item) => {

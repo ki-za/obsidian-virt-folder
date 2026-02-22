@@ -171,13 +171,16 @@
 				});
 		});
 
-		menu.addItem((item) => {
-			item.setTitle('Create unique note')
-				.setIcon('fingerprint')
-				.onClick(() => {
-					plugin.createNoteInFolder(folderId, true);
-				});
-		});
+		if((plugin.app as any).internalPlugins?.getPluginById('zk-prefixer')?.enabled)
+		{
+			menu.addItem((item) => {
+				item.setTitle('Create unique note')
+					.setIcon('fingerprint')
+					.onClick(() => {
+						plugin.createNoteInFolder(folderId, true);
+					});
+			});
+		}
 
 		if(type === 'sub_note')
 		{
