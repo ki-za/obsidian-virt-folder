@@ -2689,6 +2689,13 @@ function instance($$self, $$props, $$invalidate) {
           plugin2.deleteNote(id);
         });
       });
+      if (note && note.has_children()) {
+        menu.addItem((item) => {
+          item.setTitle("Delete with children").setIcon("trash-2").onClick(() => {
+            plugin2.deleteNoteRecursive(id);
+          });
+        });
+      }
     }
     menu.showAtMouseEvent(event);
   }
@@ -3112,6 +3119,11 @@ var YamlParser = class {
       this._fm_add_link(fm, file_id, yamlProp);
     });
   }
+  add_link_to_file(file, yamlProp, file_id) {
+    this.app.fileManager.processFrontMatter(file, (fm) => {
+      this._fm_add_link(fm, file_id, yamlProp);
+    });
+  }
   _fm_replace_link(front, selected, prop, old_link) {
     let file = this.app.vault.getFileByPath(selected);
     if (!file)
@@ -3316,6 +3328,25 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       this.registerEvent(this.app.vault.on("create", this.onCreateFile));
       this.registerEvent(this.app.vault.on("delete", this.onDeleteFile));
       this.registerEvent(this.app.vault.on("rename", this.onRenameFile));
+      this.registerEvent(this.app.workspace.on("file-menu", (menu, file, source) => {
+        if (!(file instanceof import_obsidian7.TFile))
+          return;
+        menu.addItem((item) => {
+          item.setTitle("Add to virtual folder").setIcon("folder-plus").onClick(() => {
+            this.VF_AddFilesToFolder([file]);
+          });
+        });
+      }));
+      this.registerEvent(this.app.workspace.on("files-menu", (menu, files, source) => {
+        let tfiles = files.filter((f) => f instanceof import_obsidian7.TFile);
+        if (tfiles.length === 0)
+          return;
+        menu.addItem((item) => {
+          item.setTitle("Add to virtual folder").setIcon("folder-plus").onClick(() => {
+            this.VF_AddFilesToFolder(tfiles);
+          });
+        });
+      }));
     });
   }
   async loadSettings() {
@@ -3389,6 +3420,26 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       (file_id) => {
         this.yaml.add_link(this.settings.propertyName, file_id);
         this.updateUsedTime(file_id);
+        this.update_data();
+      },
+      excludeIds
+    ).open();
+  }
+  VF_AddFilesToFolder(files) {
+    let excludeIds = /* @__PURE__ */ new Set();
+    for (let file of files) {
+      excludeIds.add(file.path);
+      let descendants = this.base.get_all_descendants(file.path);
+      for (let d of descendants)
+        excludeIds.add(d);
+    }
+    new VF_SelectFile(
+      this,
+      (folder_id) => {
+        for (let file of files) {
+          this.yaml.add_link_to_file(file, this.settings.propertyName, folder_id);
+        }
+        this.updateUsedTime(folder_id);
         this.update_data();
       },
       excludeIds
@@ -3489,10 +3540,35 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
     if (this.settings.confirmDelete) {
       let note = this.base.note_by_id(noteId);
       let displayName = note && this.settings.cmdShowTitle ? note.title : file.basename;
-      new VF_ConfirmModal(this.app, displayName, doDelete).open();
+      new VF_ConfirmModal(this.app, doDelete, "Delete note", `Delete "${displayName}"?`).open();
     } else {
       await doDelete();
     }
+  }
+  async deleteNoteRecursive(noteId) {
+    let file = this.app.vault.getFileByPath(noteId);
+    if (!file)
+      return;
+    let descendants = this.base.get_all_descendants(noteId);
+    let allIds = [noteId, ...descendants];
+    let note = this.base.note_by_id(noteId);
+    let displayName = note && this.settings.cmdShowTitle ? note.title : file.basename;
+    let title = "Delete notes";
+    let message = `Delete "${displayName}" and ${descendants.size} nested notes?`;
+    if (descendants.size === 0) {
+      title = "Delete note";
+      message = `Delete "${displayName}"?`;
+    }
+    let doDelete = async () => {
+      for (let id of allIds) {
+        let f = this.app.vault.getFileByPath(id);
+        if (f)
+          await this.app.vault.trash(f, true);
+      }
+      new import_obsidian7.Notice(`${allIds.length} note(s) deleted`);
+      this.update_data();
+    };
+    new VF_ConfirmModal(this.app, doDelete, title, message).open();
   }
   moveNoteToFolder(noteId, oldParentId, newParentId) {
     let noteFile = this.app.vault.getFileByPath(noteId);
@@ -3508,14 +3584,15 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
   }
 };
 var VF_ConfirmModal = class extends import_obsidian7.Modal {
-  constructor(app, noteName, onConfirm) {
+  constructor(app, onConfirm, title = "Delete note", message = "") {
     super(app);
-    this.noteName = noteName;
     this.onConfirm = onConfirm;
+    this.title = title;
+    this.message = message;
   }
   onOpen() {
-    this.titleEl.setText("Delete note");
-    this.contentEl.createEl("p", { text: `Delete "${this.noteName}"?` });
+    this.titleEl.setText(this.title);
+    this.contentEl.createEl("p", { text: this.message });
     new import_obsidian7.Setting(this.contentEl).addButton((btn) => {
       btn.setButtonText("Delete").setWarning().onClick(() => {
         this.close();

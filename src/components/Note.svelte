@@ -193,6 +193,17 @@
 						plugin.deleteNote(id);
 					});
 			});
+
+			if(note && note.has_children())
+			{
+				menu.addItem((item) => {
+					item.setTitle('Delete with children')
+						.setIcon('trash-2')
+						.onClick(() => {
+							plugin.deleteNoteRecursive(id);
+						});
+				});
+			}
 		}
 
 		menu.showAtMouseEvent(event);

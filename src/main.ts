@@ -98,6 +98,29 @@ export default class VirtFolderPlugin extends Plugin
 			this.registerEvent(this.app.vault.on("create", this.onCreateFile));
 			this.registerEvent(this.app.vault.on("delete", this.onDeleteFile));
 			this.registerEvent(this.app.vault.on("rename", this.onRenameFile));
+
+			this.registerEvent(this.app.workspace.on('file-menu', (menu, file, source) => {
+				if(!(file instanceof TFile)) return;
+				menu.addItem((item) => {
+					item.setTitle('Add to virtual folder')
+						.setIcon('folder-plus')
+						.onClick(() => {
+							this.VF_AddFilesToFolder([file]);
+						});
+				});
+			}));
+
+			this.registerEvent(this.app.workspace.on('files-menu', (menu, files, source) => {
+				let tfiles = files.filter((f): f is TFile => f instanceof TFile);
+				if(tfiles.length === 0) return;
+				menu.addItem((item) => {
+					item.setTitle('Add to virtual folder')
+						.setIcon('folder-plus')
+						.onClick(() => {
+							this.VF_AddFilesToFolder(tfiles);
+						});
+				});
+			}));
 		});
 	}
 
@@ -248,6 +271,29 @@ export default class VirtFolderPlugin extends Plugin
 		).open();
 	}
 
+	VF_AddFilesToFolder(files: TFile[])
+	{
+		let excludeIds = new Set<string>();
+		for(let file of files)
+		{
+			excludeIds.add(file.path);
+			let descendants = this.base.get_all_descendants(file.path);
+			for(let d of descendants) excludeIds.add(d);
+		}
+
+		new VF_SelectFile(this, (folder_id:string) =>
+			{
+				for(let file of files)
+				{
+					this.yaml.add_link_to_file(file, this.settings.propertyName, folder_id);
+				}
+				this.updateUsedTime(folder_id);
+				this.update_data();
+			},
+			excludeIds
+		).open();
+	}
+
 	VF_MoveFolder()
 	{
 		let file = this.app.workspace.getActiveFile();
@@ -361,12 +407,45 @@ export default class VirtFolderPlugin extends Plugin
 		{
 			let note = this.base.note_by_id(noteId);
 			let displayName = (note && this.settings.cmdShowTitle) ? note.title : file.basename;
-			new VF_ConfirmModal(this.app, displayName, doDelete).open();
+			new VF_ConfirmModal(this.app, doDelete, 'Delete note', `Delete "${displayName}"?`).open();
 		}
 		else
 		{
 			await doDelete();
 		}
+	}
+
+	async deleteNoteRecursive(noteId: string)
+	{
+		let file = this.app.vault.getFileByPath(noteId);
+		if(!file) return;
+
+		let descendants = this.base.get_all_descendants(noteId);
+		let allIds = [noteId, ...descendants];
+
+		let note = this.base.note_by_id(noteId);
+		let displayName = (note && this.settings.cmdShowTitle) ? note.title : file.basename;
+
+		let title = 'Delete notes';
+		let message = `Delete "${displayName}" and ${descendants.size} nested notes?`;
+
+		if(descendants.size === 0)
+		{
+			title = 'Delete note';
+			message = `Delete "${displayName}"?`;
+		}
+
+		let doDelete = async () => {
+			for(let id of allIds)
+			{
+				let f = this.app.vault.getFileByPath(id);
+				if(f) await this.app.vault.trash(f, true);
+			}
+			new Notice(`${allIds.length} note(s) deleted`);
+			this.update_data();
+		};
+
+		new VF_ConfirmModal(this.app, doDelete, title, message).open();
 	}
 
 	moveNoteToFolder(noteId:string, oldParentId:string|null, newParentId:string|null)
@@ -388,15 +467,15 @@ export default class VirtFolderPlugin extends Plugin
 
 class VF_ConfirmModal extends Modal
 {
-	constructor(app: any, private noteName: string, private onConfirm: () => void)
+	constructor(app: any, private onConfirm: () => void, private title: string = 'Delete note', private message: string = '')
 	{
 		super(app);
 	}
 
 	onOpen()
 	{
-		this.titleEl.setText('Delete note');
-		this.contentEl.createEl('p', {text: `Delete "${this.noteName}"?`});
+		this.titleEl.setText(this.title);
+		this.contentEl.createEl('p', {text: this.message});
 
 		new Setting(this.contentEl)
 			.addButton((btn) => {

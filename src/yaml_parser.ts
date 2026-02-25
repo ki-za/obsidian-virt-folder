@@ -52,6 +52,11 @@ export class YamlParser
         this.app.fileManager.processFrontMatter(file, (fm) => { this._fm_add_link(fm, file_id, yamlProp); });
     }
 
+    add_link_to_file(file:TFile, yamlProp:string, file_id:string)
+    {
+        this.app.fileManager.processFrontMatter(file, (fm) => { this._fm_add_link(fm, file_id, yamlProp); });
+    }
+
     _fm_replace_link(front:any, selected: string, prop: string, old_link:string)
     {
         let file = this.app.vault.getFileByPath(selected);
