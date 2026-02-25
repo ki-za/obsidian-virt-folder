@@ -15,6 +15,7 @@ Allows you to quickly find notes by navigating the knowledge base like a book ta
 - The ability to perform all operations using hot keys
 - Dragging and dropping notes with the mouse
 - Creating and deleting notes via the right-click menu
+- Add files to virtual folders from the file explorer context menu
 - Create notes via Unique note creator
 - Front Matter Title plugin support
 - Database optimization
