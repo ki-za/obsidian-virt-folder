@@ -94,6 +94,10 @@ export default class VirtFolderPlugin extends Plugin
 						}
 					}
 				}
+				if(files.length === 0) {
+					let file = this.app.workspace.getActiveFile();
+					if(file) files.push(file);
+				}
 				if(files.length === 0) return;
 				this.VF_AddFilesToFolder(files);
 			},

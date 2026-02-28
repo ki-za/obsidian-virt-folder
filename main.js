@@ -6022,6 +6022,11 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
             }
           }
         }
+        if (files.length === 0) {
+          let file = this.app.workspace.getActiveFile();
+          if (file)
+            files.push(file);
+        }
         if (files.length === 0)
           return;
         this.VF_AddFilesToFolder(files);
