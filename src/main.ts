@@ -80,6 +80,26 @@ export default class VirtFolderPlugin extends Plugin
 		});
 
 		this.addCommand({
+			id: "add_selected_to_folder",
+			name: "Add selected files to virtual folder",
+			icon: "folder-plus",
+			callback: () => {
+				let files: TFile[] = [];
+				let leaves = this.app.workspace.getLeavesOfType('file-explorer');
+				if(leaves.length > 0) {
+					let view = leaves[0].view as any;
+					if(view.tree?.selectedDoms) {
+						for(let dom of view.tree.selectedDoms.values()) {
+							if(dom.file instanceof TFile) files.push(dom.file);
+						}
+					}
+				}
+				if(files.length === 0) return;
+				this.VF_AddFilesToFolder(files);
+			},
+		});
+
+		this.addCommand({
 			id: "manage_icon",
 			name: "Manage icon",
 			icon: "image",

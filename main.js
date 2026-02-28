@@ -6006,6 +6006,28 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
       }
     });
     this.addCommand({
+      id: "add_selected_to_folder",
+      name: "Add selected files to virtual folder",
+      icon: "folder-plus",
+      callback: () => {
+        var _a;
+        let files = [];
+        let leaves = this.app.workspace.getLeavesOfType("file-explorer");
+        if (leaves.length > 0) {
+          let view = leaves[0].view;
+          if ((_a = view.tree) == null ? void 0 : _a.selectedDoms) {
+            for (let dom of view.tree.selectedDoms.values()) {
+              if (dom.file instanceof import_obsidian8.TFile)
+                files.push(dom.file);
+            }
+          }
+        }
+        if (files.length === 0)
+          return;
+        this.VF_AddFilesToFolder(files);
+      }
+    });
+    this.addCommand({
       id: "manage_icon",
       name: "Manage icon",
       icon: "image",
