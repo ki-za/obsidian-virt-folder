@@ -166,6 +166,22 @@ export class YamlParser
         return null;
     }
 
+    set_icon(file: TFile, icon: string)
+    {
+        this.app.fileManager.processFrontMatter(file, (fm) => {
+            if(icon)
+            {
+                fm['vf_icon'] = icon;
+                this.showMessage(`Icon set: ${icon}`);
+            }
+            else
+            {
+                delete fm['vf_icon'];
+                this.showMessage('Icon removed');
+            }
+        });
+    }
+
     move_to_folder(noteFile:TFile, yamlProp:string, oldParentPath:string|null, newParentPath:string|null)
     {
         this.app.fileManager.processFrontMatter(noteFile, (fm) =>

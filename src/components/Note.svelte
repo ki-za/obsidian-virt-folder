@@ -10,6 +10,7 @@
 	import { slide } from "svelte/transition";
 	import { getIcon, Notice, Menu } from "obsidian";
 	import { OneNote } from "onenote";
+	import { VF_IconPickerModal } from "../icon_picker_modal";
 	import type { Action } from "svelte/action";
 	import { tick } from "svelte";
 	
@@ -18,6 +19,7 @@
 	let note: OneNote;
 
 	let title = id;
+	let noteIcon = '';
 	let isCollapsed = true;
 	let IsOpened = false;
 
@@ -51,6 +53,7 @@
 			if (note)
 			{
 				title = note.title;
+				noteIcon = note.icon || '';
 				childCounter = note.count_children();
 				childList = note.children;
 			}
@@ -184,6 +187,24 @@
 
 		if(type === 'sub_note')
 		{
+			let file = plugin.app.vault.getFileByPath(id);
+
+			if(file)
+			{
+				menu.addItem((item) => {
+					item.setTitle('Manage icon')
+						.setIcon('image')
+						.onClick(() => {
+							new VF_IconPickerModal(plugin, (icon: string) => {
+								let f = plugin.app.vault.getFileByPath(id);
+								if(!f) return;
+								plugin.yaml.set_icon(f, icon);
+								plugin.update_data();
+							}).open();
+						});
+				});
+			}
+
 			menu.addSeparator();
 
 			menu.addItem((item) => {
@@ -285,7 +306,10 @@
     {/if}
     
 		<div class="tree-item-inner">
-			{title} 
+			{#if noteIcon}
+				<span class="vf-note-icon">{noteIcon}</span>
+			{/if}
+			{title}
 		</div>
 
     {#if childCounter > 0}

@@ -195,6 +195,12 @@ export class BaseScanner
                 let value = metadata.frontmatter["IsPinned"];
                 this.note_list[file_id].is_pinned = (value != "0" && value != "false");
             }
+
+            if("vf_icon" in metadata.frontmatter)
+            {
+                let value = metadata.frontmatter["vf_icon"];
+                if(_is_string(value)) this.note_list[file_id].icon = value;
+            }
         }
     }
 
@@ -661,6 +667,15 @@ export class BaseScanner
         return (value != "0" && value != "false");
     }
 
+    _read_expected_icon(file: TFile): string
+    {
+        let metadata = this.app.metadataCache.getFileCache(file);
+        if(!metadata || !metadata.frontmatter) return '';
+        if(!("vf_icon" in metadata.frontmatter)) return '';
+        let value = metadata.frontmatter["vf_icon"];
+        return _is_string(value) ? value : '';
+    }
+
     _arrays_equal(a: string[], b: string[]): boolean
     {
         if(a.length !== b.length) return false;
@@ -680,10 +695,12 @@ export class BaseScanner
         let expected_parents = this._read_expected_parents(file);
         let expected_pinned = this._read_expected_pinned(file);
         let expected_title = this.get_note_title(file);
+        let expected_icon = this._read_expected_icon(file);
 
         if(note.mtime == file.stat.mtime &&
            note.title == expected_title &&
            note.is_pinned == expected_pinned &&
+           note.icon == expected_icon &&
            this._arrays_equal(note.parents, expected_parents))
         {
             return;
@@ -695,6 +712,7 @@ export class BaseScanner
         note.mtime = file.stat.mtime;
         note.title = expected_title;
         note.is_pinned = expected_pinned;
+        note.icon = expected_icon;
 
         for(let parent_id of expected_parents)
         {

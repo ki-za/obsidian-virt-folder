@@ -8,6 +8,7 @@ import { VF_SelectPropModal  } from './select_prop_modal';
 import { VIEW_TYPE_VF, VirtFolderView as VirtFolderView } from 'tree_view';
 import { YamlParser } from 'yaml_parser';
 import { VirtFolderSettingTab, VirtFolderSettings, DEFAULT_SETTINGS } from 'settings';
+import { VF_IconPickerModal } from './icon_picker_modal';
 
 export default class VirtFolderPlugin extends Plugin
 {
@@ -78,6 +79,15 @@ export default class VirtFolderPlugin extends Plugin
 			},
 		});
 
+		this.addCommand({
+			id: "manage_icon",
+			name: "Manage icon",
+			icon: "image",
+			callback: () => {
+				this.VF_SetIcon();
+			},
+		});
+
 		this.app.workspace.onLayoutReady(() =>
 		{
 			// reactive
@@ -106,6 +116,16 @@ export default class VirtFolderPlugin extends Plugin
 						.setIcon('folder-plus')
 						.onClick(() => {
 							this.VF_AddFilesToFolder([file]);
+						});
+				});
+				menu.addItem((item) => {
+					item.setTitle('Manage icon')
+						.setIcon('image')
+						.onClick(() => {
+							new VF_IconPickerModal(this, (icon: string) => {
+								this.yaml.set_icon(file, icon);
+								this.update_data();
+							}).open();
 						});
 				});
 			}));
@@ -250,6 +270,20 @@ export default class VirtFolderPlugin extends Plugin
     {
         this.base.note_list[file_id].utime = Date.now();
     }
+
+	VF_SetIcon()
+	{
+		let file = this.app.workspace.getActiveFile();
+		if(!file) return;
+
+		new VF_IconPickerModal(this, (icon: string) =>
+		{
+			let activeFile = this.app.workspace.getActiveFile();
+			if(!activeFile) return;
+			this.yaml.set_icon(activeFile, icon);
+			this.update_data();
+		}).open();
+	}
 
 	VF_AddFolder()
 	{

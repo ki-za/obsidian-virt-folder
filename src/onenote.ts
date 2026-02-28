@@ -9,6 +9,7 @@ export class OneNote
     parents: string[] = [];
 	children: string[] = [];
 	is_pinned: boolean = false;
+	icon: string = '';
 
     
     constructor(id: string, mtime: number, ctime: number, name:string, title:string)

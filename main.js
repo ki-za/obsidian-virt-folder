@@ -32,7 +32,7 @@ __export(main_exports, {
   default: () => VirtFolderPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 
 // node_modules/svelte/src/runtime/internal/utils.js
 function noop() {
@@ -1142,6 +1142,7 @@ var OneNote = class {
     this.parents = [];
     this.children = [];
     this.is_pinned = false;
+    this.icon = "";
     this.id = id;
     this.mtime = mtime;
     this.name = name;
@@ -1488,6 +1489,11 @@ var BaseScanner = class {
         let value = metadata.frontmatter["IsPinned"];
         this.note_list[file_id].is_pinned = value != "0" && value != "false";
       }
+      if ("vf_icon" in metadata.frontmatter) {
+        let value = metadata.frontmatter["vf_icon"];
+        if (_is_string(value))
+          this.note_list[file_id].icon = value;
+      }
     }
   }
   build_links() {
@@ -1829,6 +1835,15 @@ var BaseScanner = class {
     let value = metadata.frontmatter["IsPinned"];
     return value != "0" && value != "false";
   }
+  _read_expected_icon(file) {
+    let metadata = this.app.metadataCache.getFileCache(file);
+    if (!metadata || !metadata.frontmatter)
+      return "";
+    if (!("vf_icon" in metadata.frontmatter))
+      return "";
+    let value = metadata.frontmatter["vf_icon"];
+    return _is_string(value) ? value : "";
+  }
   _arrays_equal(a, b) {
     if (a.length !== b.length)
       return false;
@@ -1846,7 +1861,8 @@ var BaseScanner = class {
     let expected_parents = this._read_expected_parents(file);
     let expected_pinned = this._read_expected_pinned(file);
     let expected_title = this.get_note_title(file);
-    if (note.mtime == file.stat.mtime && note.title == expected_title && note.is_pinned == expected_pinned && this._arrays_equal(note.parents, expected_parents)) {
+    let expected_icon = this._read_expected_icon(file);
+    if (note.mtime == file.stat.mtime && note.title == expected_title && note.is_pinned == expected_pinned && note.icon == expected_icon && this._arrays_equal(note.parents, expected_parents)) {
       return;
     }
     let old_utime = note.utime;
@@ -1854,6 +1870,7 @@ var BaseScanner = class {
     note.mtime = file.stat.mtime;
     note.title = expected_title;
     note.is_pinned = expected_pinned;
+    note.icon = expected_icon;
     for (let parent_id of expected_parents) {
       note.parents.push(parent_id);
       this.note_list[parent_id].children.push(file_id);
@@ -1999,7 +2016,7 @@ var VF_SelectPropModal = class extends import_obsidian3.SuggestModal {
 };
 
 // tree_view.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // node_modules/svelte/src/runtime/internal/disclose-version/index.js
 if (typeof window !== "undefined")
@@ -2069,15 +2086,2599 @@ function slide(node, { delay = 0, duration = 400, easing = cubicOut, axis = "y" 
 }
 
 // components/Note.svelte
+var import_obsidian5 = require("obsidian");
+
+// icon_picker_modal.ts
 var import_obsidian4 = require("obsidian");
+
+// emoji_names.ts
+var EMOJI_NAMES = {
+  "\u{1F600}": "grinning face",
+  "\u{1F603}": "smiley",
+  "\u{1F604}": "smile",
+  "\u{1F601}": "grin",
+  "\u{1F606}": "laughing",
+  "\u{1F605}": "sweat smile",
+  "\u{1F923}": "rofl",
+  "\u{1F602}": "joy",
+  "\u{1F642}": "slightly smiling",
+  "\u{1F609}": "wink",
+  "\u{1F60A}": "blush",
+  "\u{1F607}": "innocent halo",
+  "\u{1F970}": "smiling hearts love",
+  "\u{1F60D}": "heart eyes",
+  "\u{1F929}": "star struck",
+  "\u{1F60E}": "sunglasses cool",
+  "\u{1F913}": "nerd",
+  "\u{1F9D0}": "monocle",
+  "\u{1F60F}": "smirk",
+  "\u{1F914}": "thinking",
+  "\u{1F92B}": "shushing quiet",
+  "\u{1F634}": "sleeping zzz",
+  "\u{1F92F}": "exploding head mind blown",
+  "\u{1F631}": "scream fear",
+  "\u{1F973}": "party celebrate",
+  "\u{1F608}": "devil",
+  "\u{1F47B}": "ghost",
+  "\u{1F480}": "skull dead",
+  "\u{1F916}": "robot bot",
+  "\u{1F47D}": "alien ufo",
+  "\u{1F621}": "angry rage",
+  "\u{1F624}": "huffing steam",
+  "\u{1F62D}": "crying sob",
+  "\u{1F622}": "sad tear",
+  "\u{1F633}": "flushed embarrassed",
+  "\u{1F97A}": "pleading puppy",
+  "\u{1F62C}": "grimacing awkward",
+  "\u{1F92E}": "vomiting sick",
+  "\u{1F927}": "sneezing",
+  "\u{1F976}": "cold freezing",
+  "\u{1F975}": "hot sweating",
+  "\u{1F636}": "no mouth silent",
+  "\u{1F610}": "neutral",
+  "\u{1F611}": "expressionless",
+  "\u{1FAE0}": "melting",
+  "\u{1F911}": "money mouth rich",
+  "\u{1F917}": "hugging",
+  "\u{1F92D}": "giggling hand over mouth",
+  "\u{1FAE1}": "salute",
+  "\u{1FAE3}": "peeking",
+  "\u{1FAE2}": "open eyes hand over mouth",
+  "\u{1F62E}": "open mouth surprised",
+  "\u{1F62F}": "hushed",
+  "\u{1F632}": "astonished",
+  "\u{1F635}": "dizzy face",
+  "\u{1F974}": "woozy drunk",
+  "\u{1F637}": "mask medical",
+  "\u{1F912}": "thermometer sick",
+  "\u{1F915}": "bandage hurt",
+  "\u{1F910}": "zipper mouth secret",
+  "\u{1F636}\u200D\u{1F32B}\uFE0F": "face in clouds",
+  "\u{1FAE5}": "dotted line invisible",
+  "\u{1F925}": "lying pinocchio",
+  "\u{1F44D}": "thumbs up like",
+  "\u{1F44E}": "thumbs down dislike",
+  "\u{1F44B}": "wave hello",
+  "\u270B": "raised hand stop",
+  "\u{1F44F}": "clap applause",
+  "\u{1F91D}": "handshake deal",
+  "\u270C\uFE0F": "peace victory",
+  "\u{1F91E}": "crossed fingers luck",
+  "\u{1F4AA}": "muscle strong",
+  "\u270D\uFE0F": "writing hand",
+  "\u{1F64F}": "pray please thanks",
+  "\u{1F90C}": "pinched fingers italian",
+  "\u{1F90F}": "pinching small",
+  "\u{1F919}": "call me hang loose",
+  "\u{1F596}": "vulcan spock",
+  "\u{1FAF6}": "heart hands",
+  "\u{1F91F}": "love you gesture",
+  "\u{1F918}": "rock on horns",
+  "\u{1F44C}": "ok perfect",
+  "\u{1FAF0}": "hand with index finger and thumb crossed",
+  "\u2764\uFE0F": "red heart love",
+  "\u{1F9E1}": "orange heart",
+  "\u{1F49B}": "yellow heart",
+  "\u{1F49A}": "green heart",
+  "\u{1F499}": "blue heart",
+  "\u{1F49C}": "purple heart",
+  "\u{1F5A4}": "black heart",
+  "\u{1F90D}": "white heart",
+  "\u{1F494}": "broken heart",
+  "\u2764\uFE0F\u200D\u{1F525}": "heart on fire",
+  "\u2764\uFE0F\u200D\u{1FA79}": "mending heart",
+  "\u{1F4AF}": "hundred perfect score",
+  "\u{1F4A5}": "collision boom bang",
+  "\u{1F4AB}": "dizzy star",
+  "\u{1F4AC}": "speech bubble comment",
+  "\u{1F4AD}": "thought bubble think",
+  "\u{1F464}": "person silhouette user",
+  "\u{1F465}": "people group users",
+  "\u{1F476}": "baby child",
+  "\u{1F466}": "boy",
+  "\u{1F467}": "girl",
+  "\u{1F468}": "man",
+  "\u{1F469}": "woman",
+  "\u{1F474}": "old man elder",
+  "\u{1F475}": "old woman elder",
+  "\u{1F9D2}": "child",
+  "\u{1F9D3}": "older person",
+  "\u{1F9D4}": "bearded person",
+  "\u{1F9D1}\u200D\u{1F4BB}": "technologist programmer developer",
+  "\u{1F9D1}\u200D\u{1F393}": "student graduate",
+  "\u{1F9D1}\u200D\u{1F3EB}": "teacher professor",
+  "\u{1F9D1}\u200D\u{1F52C}": "scientist researcher",
+  "\u{1F9D1}\u200D\u{1F3A8}": "artist painter",
+  "\u{1F9D1}\u200D\u{1F680}": "astronaut space",
+  "\u{1F9D1}\u200D\u2695\uFE0F": "doctor health",
+  "\u{1F9D1}\u200D\u{1F373}": "cook chef",
+  "\u{1F9D1}\u200D\u{1F527}": "mechanic",
+  "\u{1F9D1}\u200D\u{1F3ED}": "factory worker",
+  "\u{1F9D1}\u200D\u{1F4BC}": "office worker",
+  "\u{1F9D1}\u200D\u{1F692}": "firefighter",
+  "\u{1F436}": "dog puppy",
+  "\u{1F431}": "cat kitten",
+  "\u{1F42D}": "mouse rat",
+  "\u{1F439}": "hamster",
+  "\u{1F430}": "rabbit bunny",
+  "\u{1F98A}": "fox",
+  "\u{1F43B}": "bear",
+  "\u{1F43C}": "panda",
+  "\u{1F428}": "koala",
+  "\u{1F981}": "lion king",
+  "\u{1F42F}": "tiger",
+  "\u{1F42E}": "cow",
+  "\u{1F437}": "pig",
+  "\u{1F438}": "frog",
+  "\u{1F435}": "monkey",
+  "\u{1F414}": "chicken",
+  "\u{1F427}": "penguin",
+  "\u{1F426}": "bird",
+  "\u{1F985}": "eagle",
+  "\u{1F989}": "owl wisdom",
+  "\u{1F98B}": "butterfly",
+  "\u{1F41B}": "bug insect",
+  "\u{1F41D}": "bee honeybee",
+  "\u{1F41E}": "ladybug",
+  "\u{1F422}": "turtle tortoise",
+  "\u{1F40D}": "snake",
+  "\u{1F98E}": "lizard",
+  "\u{1F419}": "octopus",
+  "\u{1F988}": "shark",
+  "\u{1F433}": "whale ocean",
+  "\u{1F42C}": "dolphin",
+  "\u{1F984}": "unicorn magic",
+  "\u{1F432}": "dragon",
+  "\u{1F434}": "horse",
+  "\u{1F43A}": "wolf",
+  "\u{1F417}": "boar",
+  "\u{1F43B}\u200D\u2744\uFE0F": "polar bear",
+  "\u{1F99D}": "raccoon",
+  "\u{1F9AB}": "beaver",
+  "\u{1F9A6}": "otter",
+  "\u{1F9A5}": "sloth",
+  "\u{1F9A8}": "skunk",
+  "\u{1F998}": "kangaroo",
+  "\u{1F9A1}": "badger",
+  "\u{1F43E}": "paw prints",
+  "\u{1F983}": "turkey",
+  "\u{1F413}": "rooster",
+  "\u{1F986}": "duck",
+  "\u{1F9A2}": "swan",
+  "\u{1F99C}": "parrot",
+  "\u{1FAB6}": "feather",
+  "\u{1F9A9}": "flamingo",
+  "\u{1F99A}": "peacock",
+  "\u{1F40A}": "crocodile",
+  "\u{1F409}": "dragon face",
+  "\u{1F995}": "sauropod dinosaur",
+  "\u{1F996}": "trex dinosaur",
+  "\u{1F40B}": "whale",
+  "\u{1F9AD}": "seal",
+  "\u{1F41F}": "fish",
+  "\u{1F420}": "tropical fish",
+  "\u{1F421}": "blowfish",
+  "\u{1F990}": "shrimp",
+  "\u{1F99E}": "lobster",
+  "\u{1F980}": "crab",
+  "\u{1F991}": "squid",
+  "\u{1F40C}": "snail",
+  "\u{1F997}": "cricket",
+  "\u{1FAB2}": "beetle",
+  "\u{1FAB3}": "cockroach",
+  "\u{1F577}\uFE0F": "spider",
+  "\u{1F578}\uFE0F": "spider web",
+  "\u{1F99F}": "mosquito",
+  "\u{1FAB0}": "fly",
+  "\u{1FAB1}": "worm",
+  "\u{1F9A0}": "microbe bacteria virus",
+  "\u{1F338}": "cherry blossom flower",
+  "\u{1F339}": "rose flower",
+  "\u{1F33B}": "sunflower",
+  "\u{1F33A}": "hibiscus flower",
+  "\u{1F337}": "tulip flower",
+  "\u{1F331}": "seedling sprout grow",
+  "\u{1F332}": "evergreen tree pine",
+  "\u{1F333}": "deciduous tree",
+  "\u{1F340}": "four leaf clover luck",
+  "\u{1F341}": "maple leaf autumn",
+  "\u{1F342}": "fallen leaf autumn",
+  "\u{1F33F}": "herb leaf green",
+  "\u{1F335}": "cactus desert",
+  "\u{1F344}": "mushroom",
+  "\u{1FAB4}": "potted plant",
+  "\u{1F33E}": "rice sheaf",
+  "\u{1FABB}": "hyacinth",
+  "\u{1FAB7}": "lotus",
+  "\u{1F34E}": "apple red fruit",
+  "\u{1F34A}": "orange tangerine fruit",
+  "\u{1F34B}": "lemon citrus",
+  "\u{1F347}": "grapes fruit",
+  "\u{1F353}": "strawberry fruit",
+  "\u{1F352}": "cherry fruit",
+  "\u{1F351}": "peach fruit",
+  "\u{1F34C}": "banana fruit",
+  "\u{1F349}": "watermelon fruit",
+  "\u{1F355}": "pizza food",
+  "\u{1F354}": "hamburger burger food",
+  "\u{1F35F}": "fries food",
+  "\u{1F32E}": "taco food",
+  "\u{1F370}": "cake dessert birthday",
+  "\u{1F369}": "donut doughnut dessert",
+  "\u{1F36A}": "cookie dessert",
+  "\u{1F36B}": "chocolate bar candy",
+  "\u{1F951}": "avocado",
+  "\u{1F955}": "carrot",
+  "\u{1F33D}": "corn",
+  "\u{1F966}": "broccoli",
+  "\u{1F9C4}": "garlic",
+  "\u{1F9C5}": "onion",
+  "\u{1F952}": "cucumber",
+  "\u{1FAD1}": "bell pepper",
+  "\u{1F950}": "croissant",
+  "\u{1F956}": "baguette bread",
+  "\u{1F968}": "pretzel",
+  "\u{1F9C0}": "cheese",
+  "\u{1F969}": "meat steak",
+  "\u{1F357}": "poultry chicken leg",
+  "\u{1F32D}": "hot dog",
+  "\u{1F96A}": "sandwich",
+  "\u{1F363}": "sushi",
+  "\u{1F35C}": "ramen noodles",
+  "\u{1F35D}": "pasta spaghetti",
+  "\u{1F35B}": "curry rice",
+  "\u{1F372}": "pot stew",
+  "\u{1F957}": "salad green",
+  "\u{1F37F}": "popcorn",
+  "\u{1F9C1}": "cupcake",
+  "\u{1F366}": "ice cream",
+  "\u{1F367}": "shaved ice",
+  "\u{1F368}": "ice cream sundae",
+  "\u{1F382}": "birthday cake",
+  "\u{1F36E}": "custard pudding",
+  "\u{1F36F}": "honey pot",
+  "\u2615": "coffee hot beverage",
+  "\u{1F375}": "tea green",
+  "\u{1F37A}": "beer mug drink",
+  "\u{1F377}": "wine glass drink",
+  "\u{1F964}": "cup straw beverage drink",
+  "\u{1F376}": "sake",
+  "\u{1F37E}": "champagne bottle",
+  "\u{1F942}": "clinking glasses cheers",
+  "\u{1F943}": "tumbler whiskey",
+  "\u{1FAD7}": "pouring liquid",
+  "\u{1F9CB}": "bubble tea boba",
+  "\u{1F9C3}": "juice box",
+  "\u{1F9CA}": "ice cube",
+  "\u{1F3E0}": "house home",
+  "\u{1F3E1}": "house garden home",
+  "\u{1F3E2}": "office building",
+  "\u{1F3EB}": "school building",
+  "\u{1F3E5}": "hospital building",
+  "\u{1F3F0}": "castle",
+  "\u{1F5FC}": "tower",
+  "\u{1F5FD}": "statue liberty",
+  "\u26EA": "church religion",
+  "\u{1F54C}": "mosque religion",
+  "\u26E9\uFE0F": "shinto shrine torii",
+  "\u{1F30D}": "earth globe world europe africa",
+  "\u{1F30E}": "earth globe world americas",
+  "\u{1F30F}": "earth globe world asia",
+  "\u{1F5FA}\uFE0F": "world map",
+  "\u{1F3D4}\uFE0F": "mountain snow",
+  "\u26F0\uFE0F": "mountain",
+  "\u{1F30B}": "volcano",
+  "\u{1F3DD}\uFE0F": "desert island",
+  "\u{1F3D6}\uFE0F": "beach umbrella",
+  "\u{1F697}": "car automobile",
+  "\u{1F695}": "taxi cab",
+  "\u{1F68C}": "bus",
+  "\u{1F680}": "rocket launch space",
+  "\u2708\uFE0F": "airplane plane flight travel",
+  "\u{1F681}": "helicopter",
+  "\u{1F6A2}": "ship boat",
+  "\u{1F682}": "train locomotive",
+  "\u{1F6B2}": "bicycle bike",
+  "\u26F5": "sailboat",
+  "\u{1F6F8}": "flying saucer ufo",
+  "\u{1F683}": "railway car",
+  "\u{1F684}": "high speed train",
+  "\u{1F685}": "bullet train",
+  "\u{1F686}": "train",
+  "\u{1F687}": "metro subway",
+  "\u{1F688}": "light rail",
+  "\u{1F689}": "station",
+  "\u{1F68A}": "tram",
+  "\u{1F69D}": "monorail",
+  "\u{1F69E}": "mountain railway",
+  "\u{1F68B}": "tram car",
+  "\u{1F68D}": "bus front",
+  "\u{1F68E}": "trolleybus",
+  "\u{1F690}": "minibus",
+  "\u{1F691}": "ambulance",
+  "\u{1F692}": "fire engine",
+  "\u{1F693}": "police car",
+  "\u{1F694}": "police car oncoming",
+  "\u{1F696}": "taxi oncoming",
+  "\u{1F698}": "automobile oncoming",
+  "\u{1F699}": "suv sport utility",
+  "\u{1F6FB}": "pickup truck",
+  "\u{1F69A}": "delivery truck",
+  "\u{1F69B}": "articulated lorry",
+  "\u{1F69C}": "tractor farm",
+  "\u{1F6F5}": "motor scooter",
+  "\u{1F3CD}\uFE0F": "motorcycle racing",
+  "\u{1F6FA}": "auto rickshaw",
+  "\u{1F6A0}": "mountain cableway",
+  "\u{1F6A1}": "aerial tramway",
+  "\u{1F6F6}": "canoe kayak",
+  "\u{1F6A4}": "speedboat",
+  "\u{1F6F3}\uFE0F": "passenger ship cruise",
+  "\u26F4\uFE0F": "ferry",
+  "\u{1F6E5}\uFE0F": "motor boat",
+  "\u{1F6E9}\uFE0F": "small airplane",
+  "\u{1FA82}": "parachute",
+  "\u{1F4BA}": "seat",
+  "\u{1F6F0}\uFE0F": "satellite",
+  "\u231A": "watch time clock",
+  "\u{1F4F1}": "phone mobile smartphone",
+  "\u{1F4BB}": "laptop computer",
+  "\u{1F5A5}\uFE0F": "desktop computer monitor",
+  "\u2328\uFE0F": "keyboard typing",
+  "\u{1F5B1}\uFE0F": "mouse computer",
+  "\u{1F5A8}\uFE0F": "printer",
+  "\u{1F4BE}": "floppy disk save",
+  "\u{1F4BF}": "cd optical disk",
+  "\u{1F4C0}": "dvd disk",
+  "\u{1F3AE}": "gamepad controller game",
+  "\u{1F579}\uFE0F": "joystick game",
+  "\u{1F50B}": "battery power",
+  "\u{1F4A1}": "light bulb idea",
+  "\u{1F526}": "flashlight torch",
+  "\u{1F4F7}": "camera photo",
+  "\u{1F3A5}": "movie camera video film",
+  "\u{1F4F9}": "video camera",
+  "\u{1F50D}": "magnifying glass search left",
+  "\u{1F50E}": "magnifying glass search right",
+  "\u{1F52C}": "microscope science research",
+  "\u{1F52D}": "telescope astronomy",
+  "\u{1F4E1}": "satellite antenna",
+  "\u{1F511}": "key password",
+  "\u{1F5DD}\uFE0F": "old key vintage",
+  "\u{1F512}": "lock locked security",
+  "\u{1F513}": "unlock unlocked open",
+  "\u{1F527}": "wrench tool fix",
+  "\u{1F528}": "hammer tool build",
+  "\u2699\uFE0F": "gear settings cog",
+  "\u{1F9F2}": "magnet",
+  "\u26A1": "lightning bolt zap electricity",
+  "\u{1F9EA}": "test tube experiment",
+  "\u{1F48A}": "pill medicine",
+  "\u{1FA7A}": "stethoscope medical doctor",
+  "\u{1F9EC}": "dna genetics",
+  "\u{1FA9B}": "screwdriver",
+  "\u{1FA9A}": "saw carpentry",
+  "\u{1FA9D}": "hook",
+  "\u{1F9F0}": "toolbox",
+  "\u{1FAA4}": "mousetrap",
+  "\u2697\uFE0F": "alembic chemistry",
+  "\u{1FA7B}": "x-ray",
+  "\u{1FA78}": "drop of blood",
+  "\u{1F4DD}": "memo note write pencil",
+  "\u{1F4CB}": "clipboard",
+  "\u{1F4CC}": "pushpin pin",
+  "\u{1F4CE}": "paperclip attach",
+  "\u270F\uFE0F": "pencil write edit",
+  "\u{1F58A}\uFE0F": "pen write",
+  "\u{1F58B}\uFE0F": "fountain pen write",
+  "\u{1F4D0}": "triangular ruler",
+  "\u{1F4CF}": "straight ruler",
+  "\u{1F4D5}": "book red closed",
+  "\u{1F4D7}": "book green",
+  "\u{1F4D8}": "book blue",
+  "\u{1F4D9}": "book orange",
+  "\u{1F4DA}": "books stack library",
+  "\u{1F4D6}": "open book read",
+  "\u{1F4D3}": "notebook",
+  "\u{1F4D2}": "ledger notebook",
+  "\u{1F4C4}": "page document file",
+  "\u{1F4C3}": "page curl document",
+  "\u{1F4D1}": "bookmark tabs",
+  "\u{1F5C2}\uFE0F": "card index dividers files",
+  "\u{1F4C1}": "folder file",
+  "\u{1F4C2}": "open folder file",
+  "\u{1F5C3}\uFE0F": "card file box archive",
+  "\u{1F5C4}\uFE0F": "file cabinet storage",
+  "\u{1F5D1}\uFE0F": "wastebasket trash delete",
+  "\u{1F4CA}": "bar chart graph statistics",
+  "\u{1F4C8}": "chart increasing up trend",
+  "\u{1F4C9}": "chart decreasing down trend",
+  "\u{1F4C6}": "calendar date",
+  "\u{1F4C5}": "calendar",
+  "\u{1F5D3}\uFE0F": "calendar spiral date",
+  "\u{1F4EC}": "mailbox mail",
+  "\u{1F4E7}": "email e-mail",
+  "\u{1F4E9}": "envelope arrow email incoming",
+  "\u{1F4E4}": "outbox tray upload",
+  "\u{1F4E5}": "inbox tray download",
+  "\u{1F4E6}": "package box",
+  "\u{1F4EA}": "mailbox closed",
+  "\u{1F4EB}": "mailbox raised flag",
+  "\u{1F4EE}": "postbox",
+  "\u{1F3F7}\uFE0F": "label tag price",
+  "\u2B50": "star favorite",
+  "\u{1F31F}": "glowing star shine",
+  "\u2728": "sparkles shine magic",
+  "\u{1F525}": "fire hot flame trending",
+  "\u{1F4A7}": "water droplet",
+  "\u{1F30A}": "wave ocean water",
+  "\u2600\uFE0F": "sun sunny bright",
+  "\u{1F319}": "moon crescent night",
+  "\u{1F308}": "rainbow",
+  "\u2601\uFE0F": "cloud",
+  "\u2744\uFE0F": "snowflake cold winter",
+  "\u{1F32A}\uFE0F": "tornado",
+  "\u{1F324}\uFE0F": "sun behind small cloud",
+  "\u26C8\uFE0F": "thunder cloud rain",
+  "\u{1F327}\uFE0F": "cloud rain",
+  "\u{1F328}\uFE0F": "cloud snow",
+  "\u2614": "umbrella rain",
+  "\u{1F3AF}": "target bullseye goal",
+  "\u{1F3C6}": "trophy award winner cup",
+  "\u{1F947}": "gold medal first",
+  "\u{1F948}": "silver medal second",
+  "\u{1F949}": "bronze medal third",
+  "\u{1F3C5}": "medal sports",
+  "\u{1F3AA}": "circus tent",
+  "\u{1F3A8}": "palette art paint color",
+  "\u{1F3AD}": "performing arts theater masks",
+  "\u{1F3AC}": "clapper board movie film",
+  "\u{1F3A4}": "microphone karaoke",
+  "\u{1F3A7}": "headphones music audio",
+  "\u{1F3B5}": "music note",
+  "\u{1F3B6}": "music notes",
+  "\u{1F3B9}": "piano musical keyboard",
+  "\u{1F3B8}": "guitar music",
+  "\u{1F3BA}": "trumpet music",
+  "\u{1F941}": "drum music",
+  "\u{1F3BB}": "violin",
+  "\u{1FA97}": "accordion",
+  "\u{1F3B7}": "saxophone",
+  "\u{1F3B2}": "dice game random",
+  "\u265F\uFE0F": "chess pawn strategy",
+  "\u{1F9E9}": "puzzle piece jigsaw",
+  "\u{1F381}": "gift present wrapped",
+  "\u{1F380}": "ribbon bow",
+  "\u{1F388}": "balloon party",
+  "\u{1F389}": "party popper celebrate tada",
+  "\u{1F38A}": "confetti ball celebrate",
+  "\u{1F397}\uFE0F": "reminder ribbon awareness",
+  "\u26BD": "soccer football",
+  "\u{1F3C0}": "basketball",
+  "\u{1F3C8}": "american football",
+  "\u26BE": "baseball",
+  "\u{1F3BE}": "tennis",
+  "\u{1F3D0}": "volleyball",
+  "\u{1F3C9}": "rugby",
+  "\u{1F3B1}": "billiards pool",
+  "\u{1F3D3}": "table tennis ping pong",
+  "\u{1F3F8}": "badminton",
+  "\u{1F94A}": "boxing glove",
+  "\u{1F94B}": "martial arts",
+  "\u{1F3CB}\uFE0F": "weight lifting",
+  "\u{1F938}": "cartwheeling gymnastics",
+  "\u26F7\uFE0F": "skier",
+  "\u{1F3C2}": "snowboarder",
+  "\u{1F3C4}": "surfer",
+  "\u{1F6A3}": "rowing",
+  "\u{1F3CA}": "swimming",
+  "\u{1F9D7}": "climbing",
+  "\u{1F6B4}": "cycling bicyclist",
+  "\u{1F9D8}": "yoga meditation",
+  "\u{1F3A3}": "fishing",
+  "\u{1FA81}": "kite",
+  "\u2705": "check mark done complete",
+  "\u274C": "cross mark error wrong",
+  "\u26A0\uFE0F": "warning alert caution",
+  "\u{1F6AB}": "prohibited forbidden no",
+  "\u2753": "question mark",
+  "\u2757": "exclamation mark important",
+  "\u203C\uFE0F": "double exclamation",
+  "\u2049\uFE0F": "exclamation question",
+  "\u{1F534}": "red circle dot",
+  "\u{1F7E0}": "orange circle dot",
+  "\u{1F7E1}": "yellow circle dot",
+  "\u{1F7E2}": "green circle dot",
+  "\u{1F535}": "blue circle dot",
+  "\u{1F7E3}": "purple circle dot",
+  "\u26AB": "black circle dot",
+  "\u26AA": "white circle dot",
+  "\u{1F7E4}": "brown circle dot",
+  "\u{1F7E5}": "red square",
+  "\u{1F7E7}": "orange square",
+  "\u{1F7E8}": "yellow square",
+  "\u{1F7E9}": "green square",
+  "\u{1F7E6}": "blue square",
+  "\u{1F7EA}": "purple square",
+  "\u2B1B": "black large square",
+  "\u2B1C": "white large square",
+  "\u{1F7EB}": "brown square",
+  "\u2B06\uFE0F": "arrow up",
+  "\u2B07\uFE0F": "arrow down",
+  "\u2B05\uFE0F": "arrow left",
+  "\u27A1\uFE0F": "arrow right",
+  "\u21A9\uFE0F": "arrow return back",
+  "\u{1F504}": "arrows counterclockwise refresh",
+  "\u{1F500}": "shuffle twisted arrows",
+  "\u{1F501}": "repeat loop",
+  "\u25B6\uFE0F": "play button",
+  "\u23F8\uFE0F": "pause button",
+  "\u23F9\uFE0F": "stop button",
+  "\u23E9": "fast forward",
+  "\u23EA": "rewind",
+  "\u{1F3F3}\uFE0F": "white flag surrender",
+  "\u{1F3F4}": "black flag",
+  "\u{1F6A9}": "triangular flag red",
+  "\u{1F3C1}": "checkered flag race finish",
+  "\u267B\uFE0F": "recycling recycle",
+  "\u{1F517}": "link chain",
+  "\u{1F4E2}": "loudspeaker announce",
+  "\u{1F514}": "bell notification",
+  "\u{1F515}": "bell slash no notification mute",
+  "\u{1F6E1}\uFE0F": "shield protect security",
+  "\u2694\uFE0F": "crossed swords fight",
+  "\u{1F3F9}": "bow arrow archery",
+  "\u{1F48E}": "gem diamond jewel",
+  "\u{1F451}": "crown king queen royal",
+  "\u{1F393}": "graduation cap education",
+  "\u{1F9E0}": "brain mind think intelligence",
+  "\u{1F441}\uFE0F": "eye see look vision",
+  "\u{1F440}": "eyes see look",
+  "\u{1FAC0}": "anatomical heart organ",
+  "\u{1F9B7}": "tooth dental",
+  "\u{1F9B4}": "bone skeleton",
+  "\u{1F48D}": "ring wedding diamond",
+  "\u{1F453}": "glasses eyeglasses",
+  "\u{1F576}\uFE0F": "sunglasses dark",
+  "\u{1F9F3}": "luggage suitcase travel",
+  "\u{1F392}": "backpack school bag",
+  "\u{1F6D2}": "shopping cart",
+  "\u23F0": "alarm clock time",
+  "\u23F3": "hourglass time sand",
+  "\u{1F9ED}": "compass navigation direction",
+  "\u{1F4CD}": "pin location map",
+  "\u{1F510}": "locked key secure",
+  "\u{1F56F}\uFE0F": "candle light",
+  "\u{1F4B0}": "money bag",
+  "\u{1F4B5}": "dollar banknote",
+  "\u{1F4B3}": "credit card",
+  "\u{1F9FE}": "receipt",
+  "\u{1F4B8}": "money with wings flying",
+  "\u{1FA99}": "coin",
+  "\u{1F3B0}": "slot machine jackpot",
+  "\u{1FA84}": "magic wand",
+  "\u{1F52E}": "crystal ball fortune",
+  "\u{1F9FF}": "nazar amulet evil eye",
+  "\u{1FAAC}": "hamsa",
+  "\u267E\uFE0F": "infinity",
+  "\u{1F3B4}": "flower playing cards",
+  "\u{1F004}": "mahjong",
+  "\u{1F0CF}": "joker card",
+  "\u{1F6C1}": "bathtub",
+  "\u{1F6BF}": "shower",
+  "\u{1FAA5}": "toothbrush",
+  "\u{1F9F4}": "lotion bottle",
+  "\u{1F9F7}": "safety pin",
+  "\u{1F9F9}": "broom",
+  "\u{1FAA3}": "bucket",
+  "\u{1F9FA}": "basket",
+  "\u{1F9FB}": "toilet paper roll",
+  "\u{1F6BD}": "toilet",
+  "\u{1FA9E}": "mirror",
+  "\u{1FA9F}": "window",
+  "\u{1F6CF}\uFE0F": "bed",
+  "\u{1F6CB}\uFE0F": "couch lamp",
+  "\u{1FA91}": "chair",
+  "\u{1F6AA}": "door",
+  "\u{1F9EF}": "fire extinguisher",
+  "\u{1F488}": "barber pole",
+  "\u{1F3FA}": "amphora vase",
+  // Additional smileys and faces
+  "\u{1F972}": "smiling tear happy sad",
+  "\u{1FAE4}": "face diagonal mouth",
+  "\u{1FAE8}": "shaking face",
+  "\u{1FAE9}": "face with bags under eyes tired",
+  "\u{1F60B}": "yum delicious savoring",
+  "\u{1F61C}": "winking tongue playful",
+  "\u{1F92A}": "zany crazy",
+  "\u{1F61D}": "squinting tongue",
+  "\u{1F61B}": "tongue out",
+  "\u{1F978}": "disguised face",
+  "\u{1F612}": "unamused",
+  "\u{1F61E}": "disappointed sad",
+  "\u{1F614}": "pensive sad",
+  "\u{1F61F}": "worried",
+  "\u{1F615}": "confused",
+  "\u{1F641}": "slightly frowning",
+  "\u{1F623}": "persevering",
+  "\u{1F616}": "confounded",
+  "\u{1F62B}": "tired weary",
+  "\u{1F629}": "weary exhausted",
+  "\u{1F971}": "yawning bored",
+  "\u{1F92C}": "cursing swearing angry",
+  "\u{1F620}": "angry",
+  "\u{1FAE7}": "bubbles soap",
+  "\u{1F4A8}": "dashing away wind fast",
+  "\u{1F4A6}": "sweat droplets splashing",
+  "\u{1F4A4}": "zzz sleeping",
+  "\u{1F573}\uFE0F": "hole",
+  "\u{1F4A3}": "bomb explosive",
+  "\u{1F5E8}\uFE0F": "left speech bubble",
+  "\u{1F5EF}\uFE0F": "right anger bubble",
+  "\u{1F4A2}": "anger symbol",
+  // More hand gestures
+  "\u{1F590}\uFE0F": "hand with fingers splayed",
+  "\u{1F91A}": "raised back of hand",
+  "\u{1F44A}": "fist bump punch",
+  "\u270A": "raised fist power",
+  "\u{1FAF3}": "palm down hand",
+  "\u{1FAF4}": "palm up hand",
+  "\u{1FAF2}": "leftwards hand",
+  "\u{1FAF1}": "rightwards hand",
+  "\u{1F448}": "pointing left",
+  "\u{1F449}": "pointing right",
+  "\u{1F446}": "pointing up",
+  "\u{1F447}": "pointing down",
+  "\u261D\uFE0F": "index pointing up",
+  "\u{1F595}": "middle finger",
+  "\u{1FAF5}": "index pointing at viewer",
+  "\u{1F932}": "palms up together",
+  "\u{1F64C}": "raising hands hooray",
+  "\u{1F933}": "selfie",
+  // Body and people
+  "\u{1F9B6}": "foot",
+  "\u{1F9B5}": "leg",
+  "\u{1FAC1}": "lungs breathing",
+  "\u{1F9BB}": "ear hearing",
+  "\u{1F442}": "ear",
+  "\u{1F443}": "nose smell",
+  "\u{1F9BF}": "mechanical leg prosthetic",
+  "\u{1F9BE}": "mechanical arm prosthetic",
+  "\u{1F485}": "nail polish",
+  "\u{1F937}": "shrug",
+  "\u{1F926}": "facepalm",
+  "\u{1F646}": "ok gesture person",
+  "\u{1F645}": "no good person",
+  "\u{1F487}": "haircut",
+  "\u{1F486}": "massage",
+  "\u{1F9D6}": "person in steamy room sauna",
+  "\u{1F6C0}": "person taking bath",
+  "\u{1F9D1}\u200D\u{1F9AF}": "person with white cane blind",
+  "\u{1F9D1}\u200D\u{1F9BC}": "person in motorized wheelchair",
+  "\u{1F9D1}\u200D\u{1F9BD}": "person in manual wheelchair",
+  "\u{1F9D9}": "mage wizard",
+  "\u{1F9DA}": "fairy",
+  "\u{1F9DB}": "vampire",
+  "\u{1F9DC}": "merperson",
+  "\u{1F9DD}": "elf",
+  "\u{1F9DE}": "genie",
+  "\u{1F9DF}": "zombie",
+  "\u{1F9D1}\u200D\u{1F91D}\u200D\u{1F9D1}": "people holding hands",
+  "\u{1F46B}": "man woman holding hands couple",
+  "\u{1F46C}": "men holding hands",
+  "\u{1F46D}": "women holding hands",
+  "\u{1F48F}": "kiss couple",
+  "\u{1F491}": "couple with heart love",
+  "\u{1F46A}": "family",
+  "\u{1F9D1}\u200D\u{1F9D1}\u200D\u{1F9D2}": "family parents child",
+  "\u{1FAC2}": "people hugging embrace",
+  // More animals
+  "\u{1F400}": "rat",
+  "\u{1F401}": "mouse small",
+  "\u{1F402}": "ox",
+  "\u{1F403}": "water buffalo",
+  "\u{1F404}": "cow dairy",
+  "\u{1F405}": "tiger full",
+  "\u{1F406}": "leopard",
+  "\u{1F407}": "rabbit full",
+  "\u{1F408}": "cat full",
+  "\u{1F408}\u200D\u2B1B": "black cat",
+  "\u{1F429}": "poodle dog",
+  "\u{1F9AE}": "guide dog",
+  "\u{1F415}\u200D\u{1F9BA}": "service dog",
+  "\u{1F415}": "dog full",
+  "\u{1F40E}": "horse racing",
+  "\u{1FACE}": "moose elk",
+  "\u{1FACF}": "donkey",
+  "\u{1F98C}": "deer",
+  "\u{1F9AC}": "bison buffalo",
+  "\u{1F9A3}": "mammoth woolly",
+  "\u{1F98F}": "rhinoceros",
+  "\u{1F99B}": "hippopotamus hippo",
+  "\u{1F42A}": "camel one hump",
+  "\u{1F42B}": "two hump camel",
+  "\u{1F992}": "giraffe",
+  "\u{1F418}": "elephant",
+  "\u{1F40F}": "ram sheep",
+  "\u{1F411}": "ewe sheep",
+  "\u{1F410}": "goat",
+  "\u{1F999}": "llama alpaca",
+  "\u{1F994}": "hedgehog",
+  "\u{1F43F}\uFE0F": "chipmunk",
+  "\u{1F426}\u200D\u2B1B": "black bird crow raven",
+  "\u{1F9A4}": "dodo extinct",
+  "\u{1FABF}": "goose",
+  "\u{1F9A7}": "orangutan",
+  "\u{1F412}": "monkey full",
+  "\u{1F98D}": "gorilla ape",
+  "\u{1F416}": "pig full",
+  "\u{1FAB8}": "coral reef",
+  "\u{1FABC}": "jellyfish",
+  "\u{1F41A}": "shell seashell",
+  "\u{1F41C}": "ant",
+  "\u{1F982}": "scorpion",
+  // More plants and nature
+  "\u{1F33C}": "blossom flower",
+  "\u{1F490}": "bouquet flowers",
+  "\u{1F330}": "chestnut nut",
+  "\u{1FAD8}": "beans",
+  "\u{1FAB9}": "empty nest",
+  "\u{1FABA}": "nest with eggs",
+  "\u{1F311}": "new moon dark",
+  "\u{1F312}": "waxing crescent moon",
+  "\u{1F313}": "first quarter moon",
+  "\u{1F314}": "waxing gibbous moon",
+  "\u{1F315}": "full moon",
+  "\u{1F316}": "waning gibbous moon",
+  "\u{1F317}": "last quarter moon",
+  "\u{1F318}": "waning crescent moon",
+  "\u{1F31A}": "new moon face",
+  "\u{1F31B}": "first quarter moon face",
+  "\u{1F31C}": "last quarter moon face",
+  "\u{1F31D}": "full moon face",
+  "\u{1F31E}": "sun with face",
+  "\u{1FA90}": "ringed planet saturn",
+  "\u{1F320}": "shooting star",
+  "\u{1F30C}": "milky way galaxy night sky",
+  "\u{1F32B}\uFE0F": "fog",
+  "\u{1F32C}\uFE0F": "wind face blowing",
+  "\u{1F300}": "cyclone hurricane typhoon spiral",
+  "\u{1F301}": "foggy",
+  // More food and drink
+  "\u{1F360}": "sweet potato roasted",
+  "\u{1F954}": "potato",
+  "\u{1F95A}": "egg",
+  "\u{1F373}": "cooking egg fried",
+  "\u{1F953}": "bacon",
+  "\u{1F95E}": "pancakes",
+  "\u{1F9C7}": "waffle",
+  "\u{1F96F}": "bagel",
+  "\u{1FAD3}": "flatbread",
+  "\u{1FAD4}": "tamale",
+  "\u{1F959}": "stuffed flatbread pita",
+  "\u{1F9C6}": "falafel",
+  "\u{1F958}": "shallow pan paella",
+  "\u{1FAD5}": "fondue",
+  "\u{1F96B}": "canned food",
+  "\u{1F371}": "bento box japanese lunch",
+  "\u{1F358}": "rice cracker",
+  "\u{1F359}": "rice ball onigiri",
+  "\u{1F35A}": "cooked rice",
+  "\u{1F362}": "oden skewer",
+  "\u{1F361}": "dango",
+  "\u{1F95F}": "dumpling",
+  "\u{1F960}": "fortune cookie",
+  "\u{1F961}": "takeout box",
+  "\u{1F967}": "pie",
+  "\u{1F36C}": "candy sweet",
+  "\u{1F36D}": "lollipop candy",
+  "\u{1FAD6}": "teapot",
+  "\u{1F37C}": "baby bottle milk",
+  "\u{1F95B}": "glass of milk",
+  "\u{1FAD9}": "jar container",
+  "\u{1F37D}\uFE0F": "plate cutlery fork knife",
+  "\u{1F962}": "chopsticks",
+  "\u{1F944}": "spoon",
+  "\u{1F52A}": "kitchen knife hocho",
+  // More buildings and places
+  "\u{1F3D7}\uFE0F": "construction building crane",
+  "\u{1F3D8}\uFE0F": "houses neighborhood",
+  "\u{1F3DA}\uFE0F": "derelict house abandoned",
+  "\u{1F3DB}\uFE0F": "classical building columns",
+  "\u{1F3D9}\uFE0F": "cityscape skyline",
+  "\u{1F303}": "night with stars city",
+  "\u{1F306}": "cityscape at dusk sunset",
+  "\u{1F307}": "sunset city",
+  "\u{1F305}": "sunrise morning",
+  "\u{1F304}": "sunrise over mountains",
+  "\u{1F3DC}\uFE0F": "desert",
+  "\u{1F3DE}\uFE0F": "national park nature",
+  "\u{1F3A0}": "carousel horse merry go round",
+  "\u{1F3A1}": "ferris wheel",
+  "\u{1F3A2}": "roller coaster",
+  "\u{1F3DF}\uFE0F": "stadium",
+  "\u{1F54D}": "synagogue jewish",
+  "\u{1F6D5}": "hindu temple",
+  "\u{1F54B}": "kaaba mecca",
+  "\u26F2": "fountain water",
+  "\u26FA": "tent camping",
+  "\u{1F3D5}\uFE0F": "camping tent nature",
+  // More objects
+  "\u{1FA94}": "diya lamp oil",
+  "\u{1F4FA}": "television tv monitor",
+  "\u{1F4FB}": "radio",
+  "\u{1F4E0}": "fax machine",
+  "\u{1F50A}": "speaker loud volume high",
+  "\u{1F509}": "speaker medium volume",
+  "\u{1F508}": "speaker low volume",
+  "\u{1F507}": "muted speaker volume off",
+  "\u{1F4E3}": "megaphone cheering",
+  "\u{1F399}\uFE0F": "studio microphone podcast",
+  "\u{1F39A}\uFE0F": "level slider",
+  "\u{1F39B}\uFE0F": "control knobs",
+  "\u{1F9EE}": "abacus math calculate",
+  "\u{1F5A9}": "calculator",
+  "\u{1F4F8}": "camera flash photo",
+  "\u{1F4FD}\uFE0F": "film projector",
+  "\u{1F39E}\uFE0F": "film frames",
+  "\u{1F4FC}": "videocassette vhs tape",
+  "\u{1F50C}": "electric plug power",
+  "\u{1FAAB}": "low battery",
+  "\u{1F4B6}": "euro banknote",
+  "\u{1F4B7}": "pound banknote",
+  "\u{1F4B4}": "yen banknote",
+  "\u{1FAAA}": "identification card id",
+  "\u{1F9EB}": "petri dish biology",
+  "\u{1F6D7}": "elevator lift",
+  "\u{1FA9C}": "ladder steps",
+  "\u2696\uFE0F": "balance scale justice",
+  "\u26D3\uFE0F": "chains linked",
+  "\u2693": "anchor nautical ship",
+  "\u{1F5FF}": "moai easter island statue",
+  // Zodiac and symbols
+  "\u2648": "aries zodiac",
+  "\u2649": "taurus zodiac",
+  "\u264A": "gemini zodiac",
+  "\u264B": "cancer zodiac",
+  "\u264C": "leo zodiac",
+  "\u264D": "virgo zodiac",
+  "\u264E": "libra zodiac",
+  "\u264F": "scorpio zodiac",
+  "\u2650": "sagittarius zodiac",
+  "\u2651": "capricorn zodiac",
+  "\u2652": "aquarius zodiac",
+  "\u2653": "pisces zodiac",
+  "\u26CE": "ophiuchus zodiac",
+  // Country flags
+  "\u{1F1FA}\u{1F1F8}": "flag usa america united states",
+  "\u{1F1EC}\u{1F1E7}": "flag uk britain england",
+  "\u{1F1EB}\u{1F1F7}": "flag france french",
+  "\u{1F1E9}\u{1F1EA}": "flag germany german",
+  "\u{1F1EE}\u{1F1F9}": "flag italy italian",
+  "\u{1F1EA}\u{1F1F8}": "flag spain spanish",
+  "\u{1F1F7}\u{1F1FA}": "flag russia russian",
+  "\u{1F1E8}\u{1F1F3}": "flag china chinese",
+  "\u{1F1EF}\u{1F1F5}": "flag japan japanese",
+  "\u{1F1F0}\u{1F1F7}": "flag korea south korean",
+  "\u{1F1E7}\u{1F1F7}": "flag brazil brazilian",
+  "\u{1F1EE}\u{1F1F3}": "flag india indian",
+  "\u{1F1E8}\u{1F1E6}": "flag canada canadian",
+  "\u{1F1E6}\u{1F1FA}": "flag australia australian",
+  "\u{1F1F2}\u{1F1FD}": "flag mexico mexican",
+  "\u{1F1E6}\u{1F1F7}": "flag argentina",
+  "\u{1F1F9}\u{1F1F7}": "flag turkey turkish",
+  "\u{1F1F8}\u{1F1E6}": "flag saudi arabia",
+  "\u{1F1F3}\u{1F1F1}": "flag netherlands dutch",
+  "\u{1F1F8}\u{1F1EA}": "flag sweden swedish",
+  "\u{1F1F3}\u{1F1F4}": "flag norway norwegian",
+  "\u{1F1E9}\u{1F1F0}": "flag denmark danish",
+  "\u{1F1EB}\u{1F1EE}": "flag finland finnish",
+  "\u{1F1F5}\u{1F1F1}": "flag poland polish",
+  "\u{1F1FA}\u{1F1E6}": "flag ukraine ukrainian",
+  "\u{1F1E8}\u{1F1ED}": "flag switzerland swiss",
+  "\u{1F1E6}\u{1F1F9}": "flag austria",
+  "\u{1F1E7}\u{1F1EA}": "flag belgium",
+  "\u{1F1F5}\u{1F1F9}": "flag portugal portuguese",
+  "\u{1F1EC}\u{1F1F7}": "flag greece greek",
+  "\u{1F1EE}\u{1F1EA}": "flag ireland irish",
+  "\u{1F1EE}\u{1F1F1}": "flag israel",
+  "\u{1F1EA}\u{1F1EC}": "flag egypt",
+  "\u{1F1FF}\u{1F1E6}": "flag south africa",
+  "\u{1F1F9}\u{1F1ED}": "flag thailand thai",
+  "\u{1F1FB}\u{1F1F3}": "flag vietnam vietnamese",
+  "\u{1F1EE}\u{1F1E9}": "flag indonesia",
+  "\u{1F1F5}\u{1F1ED}": "flag philippines",
+  "\u{1F1F3}\u{1F1FF}": "flag new zealand",
+  "\u{1F1F8}\u{1F1EC}": "flag singapore",
+  "\u{1F1F2}\u{1F1FE}": "flag malaysia",
+  "\u{1F1E8}\u{1F1F4}": "flag colombia",
+  "\u{1F1E8}\u{1F1F1}": "flag chile",
+  "\u{1F1F5}\u{1F1EA}": "flag peru",
+  "\u{1F1F0}\u{1F1FF}": "flag kazakhstan",
+  "\u{1F1EC}\u{1F1EA}": "flag georgia",
+  "\u{1F3F4}\u200D\u2620\uFE0F": "pirate flag jolly roger",
+  "\u{1F3F3}\uFE0F\u200D\u{1F308}": "rainbow flag pride lgbtq",
+  "\u{1F3F3}\uFE0F\u200D\u26A7\uFE0F": "transgender flag",
+  // More misc symbols
+  "\u262E\uFE0F": "peace symbol",
+  "\u271D\uFE0F": "latin cross christian",
+  "\u262A\uFE0F": "star and crescent islam",
+  "\u{1F549}\uFE0F": "om hindu buddhist",
+  "\u262F\uFE0F": "yin yang balance",
+  "\u2721\uFE0F": "star of david jewish",
+  "\u{1F52F}": "six pointed star",
+  "\u2638\uFE0F": "wheel of dharma buddhism",
+  "\u{1F6D0}": "place of worship",
+  "\u269B\uFE0F": "atom symbol science",
+  "\u2622\uFE0F": "radioactive nuclear",
+  "\u2623\uFE0F": "biohazard",
+  "\u{1F194}": "id identity",
+  "\u2695\uFE0F": "medical symbol caduceus",
+  "\u24C2\uFE0F": "circled m metro",
+  "\u{1F170}\uFE0F": "a button blood type",
+  "\u{1F171}\uFE0F": "b button blood type",
+  "\u{1F18E}": "ab button blood type",
+  "\u{1F17E}\uFE0F": "o button blood type",
+  "\u{1F198}": "sos emergency help",
+  "\u{1F19A}": "vs versus",
+  "\u{1F197}": "ok button",
+  "\u{1F195}": "new button",
+  "\u{1F193}": "free button",
+  "\u{1F201}": "japanese here",
+  "\u{1F202}\uFE0F": "japanese service charge",
+  "\u{1F530}": "japanese symbol beginner",
+  "\u2640\uFE0F": "female sign woman",
+  "\u2642\uFE0F": "male sign man",
+  "\u26A7\uFE0F": "transgender symbol",
+  "\u2716\uFE0F": "multiply cross",
+  "\u2795": "plus add",
+  "\u2796": "minus subtract",
+  "\u2797": "divide",
+  "\u{1F7F0}": "equals sign",
+  "#\uFE0F\u20E3": "hash number sign",
+  "*\uFE0F\u20E3": "asterisk keycap",
+  "0\uFE0F\u20E3": "zero keycap",
+  "1\uFE0F\u20E3": "one keycap",
+  "2\uFE0F\u20E3": "two keycap",
+  "3\uFE0F\u20E3": "three keycap",
+  "4\uFE0F\u20E3": "four keycap",
+  "5\uFE0F\u20E3": "five keycap",
+  "6\uFE0F\u20E3": "six keycap",
+  "7\uFE0F\u20E3": "seven keycap",
+  "8\uFE0F\u20E3": "eight keycap",
+  "9\uFE0F\u20E3": "nine keycap",
+  "\u{1F51F}": "ten keycap",
+  "\u{1F17F}\uFE0F": "parking button",
+  "\u{1F233}": "japanese vacancy",
+  "\u{1F234}": "japanese passing grade",
+  "\u{1F235}": "japanese no vacancy",
+  "\u{1F239}": "japanese discount",
+  "\u{1F232}": "japanese prohibited",
+  "\u{1F250}": "japanese bargain",
+  "\u{1F236}": "japanese not free of charge",
+  "\u{1F21A}": "japanese free of charge",
+  "\u{1F51D}": "top arrow",
+  "\u{1F519}": "back arrow",
+  "\u{1F51B}": "on arrow",
+  "\u{1F51C}": "soon arrow",
+  "\u{1F51A}": "end arrow",
+  "\u2195\uFE0F": "up down arrow",
+  "\u2194\uFE0F": "left right arrow",
+  "\u2197\uFE0F": "northeast arrow",
+  "\u2198\uFE0F": "southeast arrow",
+  "\u2199\uFE0F": "southwest arrow",
+  "\u2196\uFE0F": "northwest arrow",
+  "\u2934\uFE0F": "right arrow curving up",
+  "\u2935\uFE0F": "right arrow curving down",
+  "\u{1F502}": "repeat single loop one",
+  "\u{1F503}": "clockwise arrows",
+  "\u25C0\uFE0F": "reverse button rewind",
+  "\u23ED\uFE0F": "next track",
+  "\u23EE\uFE0F": "previous track",
+  "\u23EF\uFE0F": "play pause toggle",
+  "\u{1F505}": "dim button brightness low",
+  "\u{1F506}": "bright button brightness high",
+  "\u{1F4F6}": "signal bars antenna",
+  "\u{1F4F3}": "vibration mode",
+  "\u{1F4F4}": "mobile phone off",
+  "\u{1F518}": "radio button",
+  "\u{1F532}": "black square button",
+  "\u{1F533}": "white square button",
+  "\u{1F53A}": "red triangle up",
+  "\u{1F53B}": "red triangle down",
+  "\u{1F538}": "small orange diamond",
+  "\u{1F539}": "small blue diamond",
+  "\u{1F536}": "large orange diamond",
+  "\u{1F537}": "large blue diamond",
+  "\u25FB\uFE0F": "white medium square",
+  "\u25FC\uFE0F": "black medium square",
+  "\u25FD": "white medium small square",
+  "\u25FE": "black medium small square",
+  "\u25AA\uFE0F": "black small square",
+  "\u25AB\uFE0F": "white small square",
+  "\u{1F4A0}": "diamond shape with dot inside blue",
+  "\xA9\uFE0F": "copyright",
+  "\xAE\uFE0F": "registered trademark",
+  "\u2122\uFE0F": "trademark"
+};
+
+// icon_picker_modal.ts
+var GROUPS = [
+  {
+    label: "Smileys",
+    icon: "\u{1F600}",
+    emojis: [
+      "\u{1F600}",
+      "\u{1F603}",
+      "\u{1F604}",
+      "\u{1F601}",
+      "\u{1F606}",
+      "\u{1F605}",
+      "\u{1F923}",
+      "\u{1F602}",
+      "\u{1F642}",
+      "\u{1F643}",
+      "\u{1FAE0}",
+      "\u{1F609}",
+      "\u{1F60A}",
+      "\u{1F607}",
+      "\u{1F970}",
+      "\u{1F60D}",
+      "\u{1F929}",
+      "\u{1F618}",
+      "\u{1F617}",
+      "\u263A\uFE0F",
+      "\u{1F61A}",
+      "\u{1F619}",
+      "\u{1F972}",
+      "\u{1F60B}",
+      "\u{1F61B}",
+      "\u{1F61C}",
+      "\u{1F92A}",
+      "\u{1F61D}",
+      "\u{1F911}",
+      "\u{1F917}",
+      "\u{1F92D}",
+      "\u{1FAE2}",
+      "\u{1FAE3}",
+      "\u{1F92B}",
+      "\u{1F914}",
+      "\u{1FAE1}",
+      "\u{1F910}",
+      "\u{1F928}",
+      "\u{1F610}",
+      "\u{1F611}",
+      "\u{1F636}",
+      "\u{1FAE5}",
+      "\u{1F636}\u200D\u{1F32B}\uFE0F",
+      "\u{1F60F}",
+      "\u{1F612}",
+      "\u{1F644}",
+      "\u{1F62C}",
+      "\u{1F62E}\u200D\u{1F4A8}",
+      "\u{1F925}",
+      "\u{1FAE8}",
+      "\u{1F60C}",
+      "\u{1F614}",
+      "\u{1F62A}",
+      "\u{1F924}",
+      "\u{1F634}",
+      "\u{1FAE9}",
+      "\u{1F637}",
+      "\u{1F912}",
+      "\u{1F915}",
+      "\u{1F922}",
+      "\u{1F92E}",
+      "\u{1F927}",
+      "\u{1F975}",
+      "\u{1F976}",
+      "\u{1F974}",
+      "\u{1F635}",
+      "\u{1F635}\u200D\u{1F4AB}",
+      "\u{1F92F}",
+      "\u{1F920}",
+      "\u{1F973}",
+      "\u{1F978}",
+      "\u{1F60E}",
+      "\u{1F913}",
+      "\u{1F9D0}",
+      "\u{1F615}",
+      "\u{1FAE4}",
+      "\u{1F61F}",
+      "\u{1F641}",
+      "\u2639\uFE0F",
+      "\u{1F62E}",
+      "\u{1F62F}",
+      "\u{1F632}",
+      "\u{1F633}",
+      "\u{1F97A}",
+      "\u{1F979}",
+      "\u{1F626}",
+      "\u{1F627}",
+      "\u{1F628}",
+      "\u{1F630}",
+      "\u{1F625}",
+      "\u{1F622}",
+      "\u{1F62D}",
+      "\u{1F631}",
+      "\u{1F616}",
+      "\u{1F623}",
+      "\u{1F61E}",
+      "\u{1F613}",
+      "\u{1F629}",
+      "\u{1F62B}",
+      "\u{1F971}",
+      "\u{1F624}",
+      "\u{1F621}",
+      "\u{1F620}",
+      "\u{1F92C}",
+      "\u{1F608}",
+      "\u{1F47F}",
+      "\u{1F480}",
+      "\u2620\uFE0F",
+      "\u{1F4A9}",
+      "\u{1F921}",
+      "\u{1F479}",
+      "\u{1F47A}",
+      "\u{1F47B}",
+      "\u{1F47D}",
+      "\u{1F47E}",
+      "\u{1F916}",
+      "\u{1F63A}",
+      "\u{1F638}",
+      "\u{1F639}",
+      "\u{1F63B}",
+      "\u{1F63C}",
+      "\u{1F63D}",
+      "\u{1F640}",
+      "\u{1F63F}",
+      "\u{1F63E}",
+      "\u{1F648}",
+      "\u{1F649}",
+      "\u{1F64A}",
+      "\u{1F48C}",
+      "\u{1F498}",
+      "\u{1F49D}",
+      "\u{1F496}",
+      "\u{1F497}",
+      "\u{1F493}",
+      "\u{1F49E}",
+      "\u{1F495}",
+      "\u{1F49F}",
+      "\u2763\uFE0F",
+      "\u{1F494}",
+      "\u2764\uFE0F\u200D\u{1F525}",
+      "\u2764\uFE0F\u200D\u{1FA79}",
+      "\u2764\uFE0F",
+      "\u{1FA77}",
+      "\u{1F9E1}",
+      "\u{1F49B}",
+      "\u{1F49A}",
+      "\u{1F499}",
+      "\u{1FA75}",
+      "\u{1F49C}",
+      "\u{1F90E}",
+      "\u{1F5A4}",
+      "\u{1FA76}",
+      "\u{1F90D}",
+      "\u{1F48B}",
+      "\u{1F4AF}",
+      "\u{1F4A2}",
+      "\u{1F4A5}",
+      "\u{1F4AB}",
+      "\u{1F4A6}",
+      "\u{1F4A8}",
+      "\u{1F573}\uFE0F",
+      "\u{1F4AC}",
+      "\u{1F441}\uFE0F\u200D\u{1F5E8}\uFE0F",
+      "\u{1F5E8}\uFE0F",
+      "\u{1F5EF}\uFE0F",
+      "\u{1F4AD}",
+      "\u{1F4A4}"
+    ]
+  },
+  {
+    label: "People",
+    icon: "\u{1F44B}",
+    emojis: [
+      "\u{1F44B}",
+      "\u{1F91A}",
+      "\u{1F590}\uFE0F",
+      "\u270B",
+      "\u{1F596}",
+      "\u{1FAF1}",
+      "\u{1FAF2}",
+      "\u{1FAF3}",
+      "\u{1FAF4}",
+      "\u{1FAF7}",
+      "\u{1FAF8}",
+      "\u{1F44C}",
+      "\u{1F90C}",
+      "\u{1F90F}",
+      "\u270C\uFE0F",
+      "\u{1F91E}",
+      "\u{1FAF0}",
+      "\u{1F91F}",
+      "\u{1F918}",
+      "\u{1F919}",
+      "\u{1F448}",
+      "\u{1F449}",
+      "\u{1F446}",
+      "\u{1F595}",
+      "\u{1F447}",
+      "\u261D\uFE0F",
+      "\u{1FAF5}",
+      "\u{1F44D}",
+      "\u{1F44E}",
+      "\u270A",
+      "\u{1F44A}",
+      "\u{1F91B}",
+      "\u{1F91C}",
+      "\u{1F44F}",
+      "\u{1F64C}",
+      "\u{1FAF6}",
+      "\u{1F450}",
+      "\u{1F932}",
+      "\u{1F91D}",
+      "\u{1F64F}",
+      "\u270D\uFE0F",
+      "\u{1F485}",
+      "\u{1F933}",
+      "\u{1F4AA}",
+      "\u{1F9BE}",
+      "\u{1F9BF}",
+      "\u{1F9B5}",
+      "\u{1F9B6}",
+      "\u{1F442}",
+      "\u{1F9BB}",
+      "\u{1F443}",
+      "\u{1F9E0}",
+      "\u{1FAC0}",
+      "\u{1FAC1}",
+      "\u{1F9B7}",
+      "\u{1F9B4}",
+      "\u{1F440}",
+      "\u{1F441}\uFE0F",
+      "\u{1F445}",
+      "\u{1F444}",
+      "\u{1FAE6}",
+      "\u{1F476}",
+      "\u{1F9D2}",
+      "\u{1F466}",
+      "\u{1F467}",
+      "\u{1F9D1}",
+      "\u{1F471}",
+      "\u{1F468}",
+      "\u{1F469}",
+      "\u{1F9D3}",
+      "\u{1F474}",
+      "\u{1F475}",
+      "\u{1F645}",
+      "\u{1F646}",
+      "\u{1F481}",
+      "\u{1F64B}",
+      "\u{1F9CF}",
+      "\u{1F647}",
+      "\u{1F926}",
+      "\u{1F937}",
+      "\u{1F9D1}\u200D\u2695\uFE0F",
+      "\u{1F9D1}\u200D\u{1F393}",
+      "\u{1F9D1}\u200D\u{1F3EB}",
+      "\u{1F9D1}\u200D\u2696\uFE0F",
+      "\u{1F9D1}\u200D\u{1F33E}",
+      "\u{1F9D1}\u200D\u{1F373}",
+      "\u{1F9D1}\u200D\u{1F527}",
+      "\u{1F9D1}\u200D\u{1F3ED}",
+      "\u{1F9D1}\u200D\u{1F4BC}",
+      "\u{1F9D1}\u200D\u{1F52C}",
+      "\u{1F9D1}\u200D\u{1F4BB}",
+      "\u{1F9D1}\u200D\u{1F3A4}",
+      "\u{1F9D1}\u200D\u{1F3A8}",
+      "\u{1F9D1}\u200D\u2708\uFE0F",
+      "\u{1F9D1}\u200D\u{1F680}",
+      "\u{1F9D1}\u200D\u{1F692}",
+      "\u{1F46E}",
+      "\u{1F575}\uFE0F",
+      "\u{1F482}",
+      "\u{1F977}",
+      "\u{1F477}",
+      "\u{1FAC5}",
+      "\u{1F934}",
+      "\u{1F478}",
+      "\u{1F473}",
+      "\u{1F472}",
+      "\u{1F9D5}",
+      "\u{1F935}",
+      "\u{1F470}",
+      "\u{1F930}",
+      "\u{1F931}",
+      "\u{1F47C}",
+      "\u{1F385}",
+      "\u{1F936}",
+      "\u{1F9D1}\u200D\u{1F384}",
+      "\u{1F9B8}",
+      "\u{1F9B9}",
+      "\u{1F9D9}",
+      "\u{1F9DA}",
+      "\u{1F9DB}",
+      "\u{1F9DC}",
+      "\u{1F9DD}",
+      "\u{1F9DE}",
+      "\u{1F9DF}",
+      "\u{1F9CC}",
+      "\u{1F486}",
+      "\u{1F487}",
+      "\u{1F6B6}",
+      "\u{1F9CD}",
+      "\u{1F9CE}",
+      "\u{1F9D1}\u200D\u{1F9AF}",
+      "\u{1F9D1}\u200D\u{1F9BC}",
+      "\u{1F9D1}\u200D\u{1F9BD}",
+      "\u{1F3C3}",
+      "\u{1F483}",
+      "\u{1F57A}",
+      "\u{1F574}\uFE0F",
+      "\u{1F46F}",
+      "\u{1F9D6}",
+      "\u{1F9D7}",
+      "\u{1F93A}",
+      "\u{1F3C7}",
+      "\u26F7\uFE0F",
+      "\u{1F3C2}",
+      "\u{1F3CC}\uFE0F",
+      "\u{1F3C4}",
+      "\u{1F6A3}",
+      "\u{1F3CA}",
+      "\u26F9\uFE0F",
+      "\u{1F3CB}\uFE0F",
+      "\u{1F6B4}",
+      "\u{1F6B5}",
+      "\u{1F938}",
+      "\u{1F93C}",
+      "\u{1F93D}",
+      "\u{1F93E}",
+      "\u{1F939}",
+      "\u{1F9D8}",
+      "\u{1F6C0}",
+      "\u{1F6CC}",
+      "\u{1F9D1}\u200D\u{1F91D}\u200D\u{1F9D1}",
+      "\u{1F46D}",
+      "\u{1F46B}",
+      "\u{1F46C}",
+      "\u{1F48F}",
+      "\u{1F491}",
+      "\u{1F46A}",
+      "\u{1F5E3}\uFE0F",
+      "\u{1F464}",
+      "\u{1F465}",
+      "\u{1FAC2}",
+      "\u{1F463}"
+    ]
+  },
+  {
+    label: "Animals",
+    icon: "\u{1F436}",
+    emojis: [
+      "\u{1F435}",
+      "\u{1F412}",
+      "\u{1F98D}",
+      "\u{1F9A7}",
+      "\u{1F436}",
+      "\u{1F415}",
+      "\u{1F9AE}",
+      "\u{1F415}\u200D\u{1F9BA}",
+      "\u{1F429}",
+      "\u{1F43A}",
+      "\u{1F98A}",
+      "\u{1F99D}",
+      "\u{1F431}",
+      "\u{1F408}",
+      "\u{1F408}\u200D\u2B1B",
+      "\u{1F981}",
+      "\u{1F42F}",
+      "\u{1F405}",
+      "\u{1F406}",
+      "\u{1F434}",
+      "\u{1FACE}",
+      "\u{1FACF}",
+      "\u{1F40E}",
+      "\u{1F984}",
+      "\u{1F993}",
+      "\u{1F98C}",
+      "\u{1F9AC}",
+      "\u{1F42E}",
+      "\u{1F402}",
+      "\u{1F403}",
+      "\u{1F404}",
+      "\u{1F437}",
+      "\u{1F416}",
+      "\u{1F417}",
+      "\u{1F43D}",
+      "\u{1F40F}",
+      "\u{1F411}",
+      "\u{1F410}",
+      "\u{1F42A}",
+      "\u{1F42B}",
+      "\u{1F999}",
+      "\u{1F992}",
+      "\u{1F418}",
+      "\u{1F9A3}",
+      "\u{1F98F}",
+      "\u{1F99B}",
+      "\u{1F42D}",
+      "\u{1F401}",
+      "\u{1F400}",
+      "\u{1F439}",
+      "\u{1F430}",
+      "\u{1F407}",
+      "\u{1F43F}\uFE0F",
+      "\u{1F9AB}",
+      "\u{1F994}",
+      "\u{1F987}",
+      "\u{1F43B}",
+      "\u{1F43B}\u200D\u2744\uFE0F",
+      "\u{1F428}",
+      "\u{1F43C}",
+      "\u{1F9A5}",
+      "\u{1F9A6}",
+      "\u{1F9A8}",
+      "\u{1F998}",
+      "\u{1F9A1}",
+      "\u{1F43E}",
+      "\u{1F983}",
+      "\u{1F414}",
+      "\u{1F413}",
+      "\u{1F423}",
+      "\u{1F424}",
+      "\u{1F425}",
+      "\u{1F426}",
+      "\u{1F427}",
+      "\u{1F54A}\uFE0F",
+      "\u{1F985}",
+      "\u{1F986}",
+      "\u{1F9A2}",
+      "\u{1F989}",
+      "\u{1F9A4}",
+      "\u{1FAB6}",
+      "\u{1F9A9}",
+      "\u{1F99A}",
+      "\u{1F99C}",
+      "\u{1FABD}",
+      "\u{1F426}\u200D\u2B1B",
+      "\u{1FABF}",
+      "\u{1F426}\u200D\u{1F525}",
+      "\u{1F438}",
+      "\u{1F40A}",
+      "\u{1F422}",
+      "\u{1F98E}",
+      "\u{1F40D}",
+      "\u{1F432}",
+      "\u{1F409}",
+      "\u{1F995}",
+      "\u{1F996}",
+      "\u{1F433}",
+      "\u{1F40B}",
+      "\u{1F42C}",
+      "\u{1F9AD}",
+      "\u{1F41F}",
+      "\u{1F420}",
+      "\u{1F421}",
+      "\u{1F988}",
+      "\u{1F419}",
+      "\u{1F41A}",
+      "\u{1FAB8}",
+      "\u{1FABC}",
+      "\u{1F980}",
+      "\u{1F99E}",
+      "\u{1F990}",
+      "\u{1F991}",
+      "\u{1F9AA}",
+      "\u{1F40C}",
+      "\u{1F98B}",
+      "\u{1F41B}",
+      "\u{1F41C}",
+      "\u{1F41D}",
+      "\u{1FAB2}",
+      "\u{1F41E}",
+      "\u{1F997}",
+      "\u{1FAB3}",
+      "\u{1F577}\uFE0F",
+      "\u{1F578}\uFE0F",
+      "\u{1F982}",
+      "\u{1F99F}",
+      "\u{1FAB0}",
+      "\u{1FAB1}",
+      "\u{1F9A0}",
+      "\u{1F490}",
+      "\u{1F338}",
+      "\u{1F4AE}",
+      "\u{1FAB7}",
+      "\u{1F3F5}\uFE0F",
+      "\u{1F339}",
+      "\u{1F940}",
+      "\u{1F33A}",
+      "\u{1F33B}",
+      "\u{1F33C}",
+      "\u{1F337}",
+      "\u{1FABB}",
+      "\u{1F331}",
+      "\u{1FAB4}",
+      "\u{1F332}",
+      "\u{1F333}",
+      "\u{1F334}",
+      "\u{1F335}",
+      "\u{1F33E}",
+      "\u{1F33F}",
+      "\u2618\uFE0F",
+      "\u{1F340}",
+      "\u{1F341}",
+      "\u{1F342}",
+      "\u{1F343}",
+      "\u{1FAB9}",
+      "\u{1FABA}",
+      "\u{1F344}"
+    ]
+  },
+  {
+    label: "Food",
+    icon: "\u{1F354}",
+    emojis: [
+      "\u{1F347}",
+      "\u{1F348}",
+      "\u{1F349}",
+      "\u{1F34A}",
+      "\u{1F34B}",
+      "\u{1F34B}\u200D\u{1F7E9}",
+      "\u{1F34C}",
+      "\u{1F34D}",
+      "\u{1F96D}",
+      "\u{1F34E}",
+      "\u{1F34F}",
+      "\u{1F350}",
+      "\u{1F351}",
+      "\u{1F352}",
+      "\u{1F353}",
+      "\u{1FAD0}",
+      "\u{1F95D}",
+      "\u{1F345}",
+      "\u{1FAD2}",
+      "\u{1F965}",
+      "\u{1F951}",
+      "\u{1F346}",
+      "\u{1F954}",
+      "\u{1F955}",
+      "\u{1F33D}",
+      "\u{1F336}\uFE0F",
+      "\u{1FAD1}",
+      "\u{1F952}",
+      "\u{1F96C}",
+      "\u{1F966}",
+      "\u{1F9C4}",
+      "\u{1F9C5}",
+      "\u{1F95C}",
+      "\u{1FAD8}",
+      "\u{1F330}",
+      "\u{1FADA}",
+      "\u{1FADB}",
+      "\u{1F35E}",
+      "\u{1F950}",
+      "\u{1F956}",
+      "\u{1FAD3}",
+      "\u{1F968}",
+      "\u{1F96F}",
+      "\u{1F95E}",
+      "\u{1F9C7}",
+      "\u{1F9C0}",
+      "\u{1F356}",
+      "\u{1F357}",
+      "\u{1F969}",
+      "\u{1F953}",
+      "\u{1F354}",
+      "\u{1F35F}",
+      "\u{1F355}",
+      "\u{1F32D}",
+      "\u{1F96A}",
+      "\u{1F32E}",
+      "\u{1F32F}",
+      "\u{1FAD4}",
+      "\u{1F959}",
+      "\u{1F9C6}",
+      "\u{1F95A}",
+      "\u{1F373}",
+      "\u{1F958}",
+      "\u{1F372}",
+      "\u{1FAD5}",
+      "\u{1F963}",
+      "\u{1F957}",
+      "\u{1F37F}",
+      "\u{1F9C8}",
+      "\u{1F9C2}",
+      "\u{1F96B}",
+      "\u{1F371}",
+      "\u{1F358}",
+      "\u{1F359}",
+      "\u{1F35A}",
+      "\u{1F35B}",
+      "\u{1F35C}",
+      "\u{1F35D}",
+      "\u{1F360}",
+      "\u{1F362}",
+      "\u{1F363}",
+      "\u{1F364}",
+      "\u{1F365}",
+      "\u{1F96E}",
+      "\u{1F361}",
+      "\u{1F95F}",
+      "\u{1F960}",
+      "\u{1F961}",
+      "\u{1F366}",
+      "\u{1F367}",
+      "\u{1F368}",
+      "\u{1F369}",
+      "\u{1F36A}",
+      "\u{1F382}",
+      "\u{1F370}",
+      "\u{1F9C1}",
+      "\u{1F967}",
+      "\u{1F36B}",
+      "\u{1F36C}",
+      "\u{1F36D}",
+      "\u{1F36E}",
+      "\u{1F36F}",
+      "\u{1F37C}",
+      "\u{1F95B}",
+      "\u2615",
+      "\u{1FAD6}",
+      "\u{1F375}",
+      "\u{1F376}",
+      "\u{1F37E}",
+      "\u{1F377}",
+      "\u{1F378}",
+      "\u{1F379}",
+      "\u{1F37A}",
+      "\u{1F37B}",
+      "\u{1F942}",
+      "\u{1F943}",
+      "\u{1FAD7}",
+      "\u{1F964}",
+      "\u{1F9CB}",
+      "\u{1F9C3}",
+      "\u{1F9C9}",
+      "\u{1F9CA}",
+      "\u{1F962}",
+      "\u{1F37D}\uFE0F",
+      "\u{1F374}",
+      "\u{1F944}",
+      "\u{1F52A}",
+      "\u{1FAD9}",
+      "\u{1F3FA}"
+    ]
+  },
+  {
+    label: "Travel",
+    icon: "\u{1F697}",
+    emojis: [
+      "\u{1F30D}",
+      "\u{1F30E}",
+      "\u{1F30F}",
+      "\u{1F310}",
+      "\u{1F5FA}\uFE0F",
+      "\u{1F5FE}",
+      "\u{1F9ED}",
+      "\u{1F3D4}\uFE0F",
+      "\u26F0\uFE0F",
+      "\u{1F30B}",
+      "\u{1F5FB}",
+      "\u{1F3D5}\uFE0F",
+      "\u{1F3D6}\uFE0F",
+      "\u{1F3DC}\uFE0F",
+      "\u{1F3DD}\uFE0F",
+      "\u{1F3DE}\uFE0F",
+      "\u{1F3DF}\uFE0F",
+      "\u{1F3DB}\uFE0F",
+      "\u{1F3D7}\uFE0F",
+      "\u{1F9F1}",
+      "\u{1FAA8}",
+      "\u{1FAB5}",
+      "\u{1F6D6}",
+      "\u{1F3D8}\uFE0F",
+      "\u{1F3DA}\uFE0F",
+      "\u{1F3E0}",
+      "\u{1F3E1}",
+      "\u{1F3E2}",
+      "\u{1F3E3}",
+      "\u{1F3E4}",
+      "\u{1F3E5}",
+      "\u{1F3E6}",
+      "\u{1F3E8}",
+      "\u{1F3E9}",
+      "\u{1F3EA}",
+      "\u{1F3EB}",
+      "\u{1F3EC}",
+      "\u{1F3ED}",
+      "\u{1F3EF}",
+      "\u{1F3F0}",
+      "\u{1F492}",
+      "\u{1F5FC}",
+      "\u{1F5FD}",
+      "\u26EA",
+      "\u{1F54C}",
+      "\u{1F6D5}",
+      "\u{1F54D}",
+      "\u26E9\uFE0F",
+      "\u{1F54B}",
+      "\u26F2",
+      "\u26FA",
+      "\u{1F301}",
+      "\u{1F303}",
+      "\u{1F3D9}\uFE0F",
+      "\u{1F304}",
+      "\u{1F305}",
+      "\u{1F306}",
+      "\u{1F307}",
+      "\u{1F309}",
+      "\u2668\uFE0F",
+      "\u{1F3A0}",
+      "\u{1F6DD}",
+      "\u{1F3A1}",
+      "\u{1F3A2}",
+      "\u{1F488}",
+      "\u{1F3AA}",
+      "\u{1F682}",
+      "\u{1F683}",
+      "\u{1F684}",
+      "\u{1F685}",
+      "\u{1F686}",
+      "\u{1F687}",
+      "\u{1F688}",
+      "\u{1F689}",
+      "\u{1F68A}",
+      "\u{1F69D}",
+      "\u{1F69E}",
+      "\u{1F68B}",
+      "\u{1F68C}",
+      "\u{1F68D}",
+      "\u{1F68E}",
+      "\u{1F690}",
+      "\u{1F691}",
+      "\u{1F692}",
+      "\u{1F693}",
+      "\u{1F694}",
+      "\u{1F695}",
+      "\u{1F696}",
+      "\u{1F697}",
+      "\u{1F698}",
+      "\u{1F699}",
+      "\u{1F6FB}",
+      "\u{1F69A}",
+      "\u{1F69B}",
+      "\u{1F69C}",
+      "\u{1F3CE}\uFE0F",
+      "\u{1F3CD}\uFE0F",
+      "\u{1F6F5}",
+      "\u{1F9BD}",
+      "\u{1F9BC}",
+      "\u{1F6FA}",
+      "\u{1F6B2}",
+      "\u{1F6F4}",
+      "\u{1F6F9}",
+      "\u{1F6FC}",
+      "\u{1F68F}",
+      "\u{1F6E3}\uFE0F",
+      "\u{1F6E4}\uFE0F",
+      "\u{1F6E2}\uFE0F",
+      "\u26FD",
+      "\u{1F6DE}",
+      "\u{1F6A8}",
+      "\u{1F6A5}",
+      "\u{1F6A6}",
+      "\u{1F6D1}",
+      "\u{1F6A7}",
+      "\u2693",
+      "\u{1F6DF}",
+      "\u26F5",
+      "\u{1F6F6}",
+      "\u{1F6A4}",
+      "\u{1F6F3}\uFE0F",
+      "\u26F4\uFE0F",
+      "\u{1F6E5}\uFE0F",
+      "\u{1F6A2}",
+      "\u2708\uFE0F",
+      "\u{1F6E9}\uFE0F",
+      "\u{1F6EB}",
+      "\u{1F6EC}",
+      "\u{1FA82}",
+      "\u{1F4BA}",
+      "\u{1F681}",
+      "\u{1F69F}",
+      "\u{1F6A0}",
+      "\u{1F6A1}",
+      "\u{1F6F0}\uFE0F",
+      "\u{1F680}",
+      "\u{1F6F8}",
+      "\u{1F6CE}\uFE0F",
+      "\u{1F9F3}",
+      "\u231B",
+      "\u23F3",
+      "\u231A",
+      "\u23F0",
+      "\u23F1\uFE0F",
+      "\u23F2\uFE0F",
+      "\u{1F570}\uFE0F",
+      "\u{1F311}",
+      "\u{1F312}",
+      "\u{1F313}",
+      "\u{1F314}",
+      "\u{1F315}",
+      "\u{1F316}",
+      "\u{1F317}",
+      "\u{1F318}",
+      "\u{1F319}",
+      "\u{1F31A}",
+      "\u{1F31B}",
+      "\u{1F31C}",
+      "\u{1F321}\uFE0F",
+      "\u2600\uFE0F",
+      "\u{1F31D}",
+      "\u{1F31E}",
+      "\u{1FA90}",
+      "\u2B50",
+      "\u{1F31F}",
+      "\u{1F320}",
+      "\u{1F30C}",
+      "\u2601\uFE0F",
+      "\u26C5",
+      "\u26C8\uFE0F",
+      "\u{1F324}\uFE0F",
+      "\u{1F325}\uFE0F",
+      "\u{1F326}\uFE0F",
+      "\u{1F327}\uFE0F",
+      "\u{1F328}\uFE0F",
+      "\u{1F329}\uFE0F",
+      "\u{1F32A}\uFE0F",
+      "\u{1F32B}\uFE0F",
+      "\u{1F32C}\uFE0F",
+      "\u{1F300}",
+      "\u{1F308}",
+      "\u{1F302}",
+      "\u2602\uFE0F",
+      "\u2614",
+      "\u26F1\uFE0F",
+      "\u26A1",
+      "\u2744\uFE0F",
+      "\u2603\uFE0F",
+      "\u26C4",
+      "\u2604\uFE0F",
+      "\u{1F525}",
+      "\u{1F4A7}",
+      "\u{1F30A}"
+    ]
+  },
+  {
+    label: "Activities",
+    icon: "\u{1F3AF}",
+    emojis: [
+      "\u{1F383}",
+      "\u{1F384}",
+      "\u{1F386}",
+      "\u{1F387}",
+      "\u{1F9E8}",
+      "\u2728",
+      "\u{1F388}",
+      "\u{1F389}",
+      "\u{1F38A}",
+      "\u{1F38B}",
+      "\u{1F38D}",
+      "\u{1F38E}",
+      "\u{1F38F}",
+      "\u{1F390}",
+      "\u{1F391}",
+      "\u{1F9E7}",
+      "\u{1F380}",
+      "\u{1F381}",
+      "\u{1F397}\uFE0F",
+      "\u{1F39F}\uFE0F",
+      "\u{1F3AB}",
+      "\u{1F396}\uFE0F",
+      "\u{1F3C6}",
+      "\u{1F3C5}",
+      "\u{1F947}",
+      "\u{1F948}",
+      "\u{1F949}",
+      "\u26BD",
+      "\u26BE",
+      "\u{1F94E}",
+      "\u{1F3C0}",
+      "\u{1F3D0}",
+      "\u{1F3C8}",
+      "\u{1F3C9}",
+      "\u{1F3BE}",
+      "\u{1F94F}",
+      "\u{1F3B3}",
+      "\u{1F3CF}",
+      "\u{1F3D1}",
+      "\u{1F3D2}",
+      "\u{1F94D}",
+      "\u{1F3D3}",
+      "\u{1F3F8}",
+      "\u{1F94A}",
+      "\u{1F94B}",
+      "\u{1F945}",
+      "\u26F3",
+      "\u26F8\uFE0F",
+      "\u{1F3A3}",
+      "\u{1F93F}",
+      "\u{1F3BD}",
+      "\u{1F3BF}",
+      "\u{1F6F7}",
+      "\u{1F94C}",
+      "\u{1F3AF}",
+      "\u{1FA80}",
+      "\u{1FA81}",
+      "\u{1F52B}",
+      "\u{1F3B1}",
+      "\u{1F52E}",
+      "\u{1FA84}",
+      "\u{1F3AE}",
+      "\u{1F579}\uFE0F",
+      "\u{1F3B0}",
+      "\u{1F3B2}",
+      "\u{1F9E9}",
+      "\u{1F9F8}",
+      "\u{1FA85}",
+      "\u{1FAA9}",
+      "\u{1FA86}",
+      "\u2660\uFE0F",
+      "\u2665\uFE0F",
+      "\u2666\uFE0F",
+      "\u2663\uFE0F",
+      "\u265F\uFE0F",
+      "\u{1F0CF}",
+      "\u{1F004}",
+      "\u{1F3B4}",
+      "\u{1F3AD}",
+      "\u{1F5BC}\uFE0F",
+      "\u{1F3A8}",
+      "\u{1F9F5}",
+      "\u{1FAA1}",
+      "\u{1F9F6}",
+      "\u{1FAA2}"
+    ]
+  },
+  {
+    label: "Objects",
+    icon: "\u{1F4A1}",
+    emojis: [
+      "\u{1F453}",
+      "\u{1F576}\uFE0F",
+      "\u{1F97D}",
+      "\u{1F97C}",
+      "\u{1F9BA}",
+      "\u{1F454}",
+      "\u{1F455}",
+      "\u{1F456}",
+      "\u{1F9E3}",
+      "\u{1F9E4}",
+      "\u{1F9E5}",
+      "\u{1F9E6}",
+      "\u{1F457}",
+      "\u{1F458}",
+      "\u{1F97B}",
+      "\u{1FA71}",
+      "\u{1FA72}",
+      "\u{1FA73}",
+      "\u{1F459}",
+      "\u{1F45A}",
+      "\u{1FAAD}",
+      "\u{1F45B}",
+      "\u{1F45C}",
+      "\u{1F45D}",
+      "\u{1F6CD}\uFE0F",
+      "\u{1F392}",
+      "\u{1FA74}",
+      "\u{1F45E}",
+      "\u{1F45F}",
+      "\u{1F97E}",
+      "\u{1F97F}",
+      "\u{1F460}",
+      "\u{1F461}",
+      "\u{1FA70}",
+      "\u{1F462}",
+      "\u{1FAAE}",
+      "\u{1F451}",
+      "\u{1F452}",
+      "\u{1F3A9}",
+      "\u{1F393}",
+      "\u{1F9E2}",
+      "\u{1FA96}",
+      "\u26D1\uFE0F",
+      "\u{1F4FF}",
+      "\u{1F484}",
+      "\u{1F48D}",
+      "\u{1F48E}",
+      "\u{1F507}",
+      "\u{1F508}",
+      "\u{1F509}",
+      "\u{1F50A}",
+      "\u{1F4E2}",
+      "\u{1F4E3}",
+      "\u{1F4EF}",
+      "\u{1F514}",
+      "\u{1F515}",
+      "\u{1F3BC}",
+      "\u{1F3B5}",
+      "\u{1F3B6}",
+      "\u{1F399}\uFE0F",
+      "\u{1F39A}\uFE0F",
+      "\u{1F39B}\uFE0F",
+      "\u{1F3A4}",
+      "\u{1F3A7}",
+      "\u{1F4FB}",
+      "\u{1F3B7}",
+      "\u{1FA97}",
+      "\u{1F3B8}",
+      "\u{1F3B9}",
+      "\u{1F3BA}",
+      "\u{1F3BB}",
+      "\u{1FA95}",
+      "\u{1F941}",
+      "\u{1FA98}",
+      "\u{1FA87}",
+      "\u{1FA88}",
+      "\u{1FA89}",
+      "\u{1F4F1}",
+      "\u{1F4F2}",
+      "\u260E\uFE0F",
+      "\u{1F4DE}",
+      "\u{1F4DF}",
+      "\u{1F4E0}",
+      "\u{1F50B}",
+      "\u{1FAAB}",
+      "\u{1F50C}",
+      "\u{1F4BB}",
+      "\u{1F5A5}\uFE0F",
+      "\u{1F5A8}\uFE0F",
+      "\u2328\uFE0F",
+      "\u{1F5B1}\uFE0F",
+      "\u{1F5B2}\uFE0F",
+      "\u{1F4BD}",
+      "\u{1F4BE}",
+      "\u{1F4BF}",
+      "\u{1F4C0}",
+      "\u{1F9EE}",
+      "\u{1F3A5}",
+      "\u{1F39E}\uFE0F",
+      "\u{1F4FD}\uFE0F",
+      "\u{1F3AC}",
+      "\u{1F4FA}",
+      "\u{1F4F7}",
+      "\u{1F4F8}",
+      "\u{1F4F9}",
+      "\u{1F4FC}",
+      "\u{1F50D}",
+      "\u{1F50E}",
+      "\u{1F56F}\uFE0F",
+      "\u{1F4A1}",
+      "\u{1F526}",
+      "\u{1F3EE}",
+      "\u{1FA94}",
+      "\u{1F4D4}",
+      "\u{1F4D5}",
+      "\u{1F4D6}",
+      "\u{1F4D7}",
+      "\u{1F4D8}",
+      "\u{1F4D9}",
+      "\u{1F4DA}",
+      "\u{1F4D3}",
+      "\u{1F4D2}",
+      "\u{1F4C3}",
+      "\u{1F4DC}",
+      "\u{1F4C4}",
+      "\u{1F4F0}",
+      "\u{1F5DE}\uFE0F",
+      "\u{1F4D1}",
+      "\u{1F516}",
+      "\u{1F3F7}\uFE0F",
+      "\u{1F4B0}",
+      "\u{1FA99}",
+      "\u{1F4B4}",
+      "\u{1F4B5}",
+      "\u{1F4B6}",
+      "\u{1F4B7}",
+      "\u{1F4B8}",
+      "\u{1F4B3}",
+      "\u{1F9FE}",
+      "\u{1F4B9}",
+      "\u2709\uFE0F",
+      "\u{1F4E7}",
+      "\u{1F4E8}",
+      "\u{1F4E9}",
+      "\u{1F4E4}",
+      "\u{1F4E5}",
+      "\u{1F4E6}",
+      "\u{1F4EB}",
+      "\u{1F4EA}",
+      "\u{1F4EC}",
+      "\u{1F4ED}",
+      "\u{1F4EE}",
+      "\u{1F5F3}\uFE0F",
+      "\u270F\uFE0F",
+      "\u2712\uFE0F",
+      "\u{1F58B}\uFE0F",
+      "\u{1F58A}\uFE0F",
+      "\u{1F58C}\uFE0F",
+      "\u{1F58D}\uFE0F",
+      "\u{1F4DD}",
+      "\u{1F4BC}",
+      "\u{1F4C1}",
+      "\u{1F4C2}",
+      "\u{1F5C2}\uFE0F",
+      "\u{1F4C5}",
+      "\u{1F4C6}",
+      "\u{1F5D2}\uFE0F",
+      "\u{1F5D3}\uFE0F",
+      "\u{1F4C7}",
+      "\u{1F4C8}",
+      "\u{1F4C9}",
+      "\u{1F4CA}",
+      "\u{1F4CB}",
+      "\u{1F4CC}",
+      "\u{1F4CD}",
+      "\u{1F4CE}",
+      "\u{1F587}\uFE0F",
+      "\u{1F4CF}",
+      "\u{1F4D0}",
+      "\u2702\uFE0F",
+      "\u{1F5C3}\uFE0F",
+      "\u{1F5C4}\uFE0F",
+      "\u{1F5D1}\uFE0F",
+      "\u{1F512}",
+      "\u{1F513}",
+      "\u{1F50F}",
+      "\u{1F510}",
+      "\u{1F511}",
+      "\u{1F5DD}\uFE0F",
+      "\u{1F528}",
+      "\u{1FA93}",
+      "\u26CF\uFE0F",
+      "\u2692\uFE0F",
+      "\u{1F6E0}\uFE0F",
+      "\u{1F5E1}\uFE0F",
+      "\u2694\uFE0F",
+      "\u{1F4A3}",
+      "\u{1FA83}",
+      "\u{1F3F9}",
+      "\u{1F6E1}\uFE0F",
+      "\u{1FA9A}",
+      "\u{1F527}",
+      "\u{1FA9B}",
+      "\u{1F529}",
+      "\u2699\uFE0F",
+      "\u{1F5DC}\uFE0F",
+      "\u2696\uFE0F",
+      "\u{1F9AF}",
+      "\u{1F517}",
+      "\u26D3\uFE0F",
+      "\u{1FA9D}",
+      "\u{1F9F0}",
+      "\u{1F9F2}",
+      "\u{1FA9C}",
+      "\u2697\uFE0F",
+      "\u{1F9EA}",
+      "\u{1F9EB}",
+      "\u{1F9EC}",
+      "\u{1F52C}",
+      "\u{1F52D}",
+      "\u{1F4E1}",
+      "\u{1F489}",
+      "\u{1FA78}",
+      "\u{1F48A}",
+      "\u{1FA79}",
+      "\u{1FA7C}",
+      "\u{1FA7A}",
+      "\u{1FA7B}",
+      "\u{1F6AA}",
+      "\u{1F6D7}",
+      "\u{1FA9E}",
+      "\u{1FA9F}",
+      "\u{1F6CF}\uFE0F",
+      "\u{1F6CB}\uFE0F",
+      "\u{1FA91}",
+      "\u{1F6BD}",
+      "\u{1FAA0}",
+      "\u{1F6BF}",
+      "\u{1F6C1}",
+      "\u{1FAA4}",
+      "\u{1FA92}",
+      "\u{1F9F4}",
+      "\u{1F9F7}",
+      "\u{1F9F9}",
+      "\u{1F9FA}",
+      "\u{1F9FB}",
+      "\u{1FAA3}",
+      "\u{1F9FC}",
+      "\u{1FAE7}",
+      "\u{1FAA5}",
+      "\u{1F9FD}",
+      "\u{1F9EF}",
+      "\u{1F6D2}",
+      "\u{1F6AC}",
+      "\u26B0\uFE0F",
+      "\u{1FAA6}",
+      "\u26B1\uFE0F",
+      "\u{1F9FF}",
+      "\u{1FAAC}",
+      "\u{1F5FF}",
+      "\u{1FAA7}",
+      "\u{1FAAA}"
+    ]
+  },
+  {
+    label: "Symbols",
+    icon: "\u{1F523}",
+    emojis: [
+      "\u{1F3E7}",
+      "\u{1F6AE}",
+      "\u{1F6B0}",
+      "\u267F",
+      "\u{1F6B9}",
+      "\u{1F6BA}",
+      "\u{1F6BB}",
+      "\u{1F6BC}",
+      "\u{1F6BE}",
+      "\u{1F6C2}",
+      "\u{1F6C3}",
+      "\u{1F6C4}",
+      "\u{1F6C5}",
+      "\u26A0\uFE0F",
+      "\u{1F6B8}",
+      "\u26D4",
+      "\u{1F6AB}",
+      "\u{1F6B3}",
+      "\u{1F6AD}",
+      "\u{1F6AF}",
+      "\u{1F6B1}",
+      "\u{1F6B7}",
+      "\u{1F4F5}",
+      "\u{1F51E}",
+      "\u2622\uFE0F",
+      "\u2623\uFE0F",
+      "\u2B06\uFE0F",
+      "\u2197\uFE0F",
+      "\u27A1\uFE0F",
+      "\u2198\uFE0F",
+      "\u2B07\uFE0F",
+      "\u2199\uFE0F",
+      "\u2B05\uFE0F",
+      "\u2196\uFE0F",
+      "\u2195\uFE0F",
+      "\u2194\uFE0F",
+      "\u21A9\uFE0F",
+      "\u21AA\uFE0F",
+      "\u2934\uFE0F",
+      "\u2935\uFE0F",
+      "\u{1F503}",
+      "\u{1F504}",
+      "\u{1F519}",
+      "\u{1F51A}",
+      "\u{1F51B}",
+      "\u{1F51C}",
+      "\u{1F51D}",
+      "\u{1F6D0}",
+      "\u269B\uFE0F",
+      "\u{1F549}\uFE0F",
+      "\u2721\uFE0F",
+      "\u2638\uFE0F",
+      "\u262F\uFE0F",
+      "\u271D\uFE0F",
+      "\u2626\uFE0F",
+      "\u262A\uFE0F",
+      "\u262E\uFE0F",
+      "\u{1F54E}",
+      "\u{1F52F}",
+      "\u{1FAAF}",
+      "\u2648",
+      "\u2649",
+      "\u264A",
+      "\u264B",
+      "\u264C",
+      "\u264D",
+      "\u264E",
+      "\u264F",
+      "\u2650",
+      "\u2651",
+      "\u2652",
+      "\u2653",
+      "\u26CE",
+      "\u{1F500}",
+      "\u{1F501}",
+      "\u{1F502}",
+      "\u25B6\uFE0F",
+      "\u23E9",
+      "\u23ED\uFE0F",
+      "\u23EF\uFE0F",
+      "\u25C0\uFE0F",
+      "\u23EA",
+      "\u23EE\uFE0F",
+      "\u{1F53C}",
+      "\u23EB",
+      "\u{1F53D}",
+      "\u23EC",
+      "\u23F8\uFE0F",
+      "\u23F9\uFE0F",
+      "\u23FA\uFE0F",
+      "\u23CF\uFE0F",
+      "\u{1F3A6}",
+      "\u{1F505}",
+      "\u{1F506}",
+      "\u{1F4F6}",
+      "\u{1F6DC}",
+      "\u{1F4F3}",
+      "\u{1F4F4}",
+      "\u2640\uFE0F",
+      "\u2642\uFE0F",
+      "\u26A7\uFE0F",
+      "\u2716\uFE0F",
+      "\u2795",
+      "\u2796",
+      "\u2797",
+      "\u{1F7F0}",
+      "\u267E\uFE0F",
+      "\u203C\uFE0F",
+      "\u2049\uFE0F",
+      "\u2753",
+      "\u2754",
+      "\u2755",
+      "\u2757",
+      "\u3030\uFE0F",
+      "\u{1F4B1}",
+      "\u{1F4B2}",
+      "\u2695\uFE0F",
+      "\u267B\uFE0F",
+      "\u269C\uFE0F",
+      "\u{1F531}",
+      "\u{1F4DB}",
+      "\u{1F530}",
+      "\u2B55",
+      "\u2705",
+      "\u2611\uFE0F",
+      "\u2714\uFE0F",
+      "\u274C",
+      "\u274E",
+      "\u27B0",
+      "\u27BF",
+      "\u303D\uFE0F",
+      "\u2733\uFE0F",
+      "\u2734\uFE0F",
+      "\u2747\uFE0F",
+      "\xA9\uFE0F",
+      "\xAE\uFE0F",
+      "\u2122\uFE0F",
+      "#\uFE0F\u20E3",
+      "*\uFE0F\u20E3",
+      "0\uFE0F\u20E3",
+      "1\uFE0F\u20E3",
+      "2\uFE0F\u20E3",
+      "3\uFE0F\u20E3",
+      "4\uFE0F\u20E3",
+      "5\uFE0F\u20E3",
+      "6\uFE0F\u20E3",
+      "7\uFE0F\u20E3",
+      "8\uFE0F\u20E3",
+      "9\uFE0F\u20E3",
+      "\u{1F51F}",
+      "\u{1F520}",
+      "\u{1F521}",
+      "\u{1F522}",
+      "\u{1F523}",
+      "\u{1F524}",
+      "\u{1F170}\uFE0F",
+      "\u{1F18E}",
+      "\u{1F171}\uFE0F",
+      "\u{1F191}",
+      "\u{1F192}",
+      "\u{1F193}",
+      "\u2139\uFE0F",
+      "\u{1F194}",
+      "\u24C2\uFE0F",
+      "\u{1F195}",
+      "\u{1F196}",
+      "\u{1F17E}\uFE0F",
+      "\u{1F197}",
+      "\u{1F17F}\uFE0F",
+      "\u{1F198}",
+      "\u{1F199}",
+      "\u{1F19A}",
+      "\u{1F201}",
+      "\u{1F202}\uFE0F",
+      "\u{1F237}\uFE0F",
+      "\u{1F236}",
+      "\u{1F22F}",
+      "\u{1F250}",
+      "\u{1F239}",
+      "\u{1F21A}",
+      "\u{1F232}",
+      "\u{1F251}",
+      "\u{1F238}",
+      "\u{1F234}",
+      "\u{1F233}",
+      "\u3297\uFE0F",
+      "\u3299\uFE0F",
+      "\u{1F23A}",
+      "\u{1F235}",
+      "\u{1F534}",
+      "\u{1F7E0}",
+      "\u{1F7E1}",
+      "\u{1F7E2}",
+      "\u{1F535}",
+      "\u{1F7E3}",
+      "\u{1F7E4}",
+      "\u26AB",
+      "\u26AA",
+      "\u{1F7E5}",
+      "\u{1F7E7}",
+      "\u{1F7E8}",
+      "\u{1F7E9}",
+      "\u{1F7E6}",
+      "\u{1F7EA}",
+      "\u{1F7EB}",
+      "\u2B1B",
+      "\u2B1C",
+      "\u25FC\uFE0F",
+      "\u25FB\uFE0F",
+      "\u25FE",
+      "\u25FD",
+      "\u25AA\uFE0F",
+      "\u25AB\uFE0F",
+      "\u{1F536}",
+      "\u{1F537}",
+      "\u{1F538}",
+      "\u{1F539}",
+      "\u{1F53A}",
+      "\u{1F53B}",
+      "\u{1F4A0}",
+      "\u{1F518}",
+      "\u{1F533}",
+      "\u{1F532}"
+    ]
+  }
+];
+function getAllItems() {
+  let items = [];
+  for (let g of GROUPS)
+    for (let e of g.emojis)
+      items.push({ emoji: e, name: EMOJI_NAMES[e] || "" });
+  return items;
+}
+var VF_IconPickerModal = class extends import_obsidian4.Modal {
+  constructor(plugin2, onSubmit) {
+    super(plugin2.app);
+    this.plugin = plugin2;
+    this.onSubmit = onSubmit;
+    this.query = "";
+    this.activeGroup = 0;
+  }
+  onOpen() {
+    this.titleEl.setText("Manage icon");
+    this.modalEl.addClass("vf-icon-modal");
+    let searchInput = this.contentEl.createEl("input", {
+      type: "text",
+      placeholder: "Search...",
+      cls: "vf-icon-search"
+    });
+    let searchTimer = 0;
+    searchInput.addEventListener("input", () => {
+      if (searchTimer)
+        clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(() => {
+        this.query = searchInput.value.toLowerCase();
+        this.renderGrid();
+      }, 120);
+    });
+    this.tabsEl = this.contentEl.createDiv({ cls: "vf-icon-tabs" });
+    this.gridEl = this.contentEl.createDiv({ cls: "vf-icon-grid" });
+    this.gridEl.addEventListener("click", (e) => {
+      let target = e.target.closest(".vf-icon-cell");
+      if (!target || !target.dataset.emoji)
+        return;
+      this.close();
+      this.onSubmit(target.dataset.emoji);
+    });
+    this.buildTabs();
+    this.renderGrid();
+    let removeBtn = this.contentEl.createEl("button", {
+      text: "Remove icon",
+      cls: "vf-icon-remove-btn"
+    });
+    removeBtn.addEventListener("click", () => {
+      this.close();
+      this.onSubmit("");
+    });
+    searchInput.focus();
+  }
+  buildTabs() {
+    for (let i = 0; i < GROUPS.length; i++) {
+      let tab = this.tabsEl.createDiv({ cls: "vf-icon-tab" });
+      tab.textContent = GROUPS[i].icon;
+      tab.title = GROUPS[i].label;
+      tab.addEventListener("click", () => {
+        this.activeGroup = i;
+        this.query = "";
+        let input = this.contentEl.querySelector(".vf-icon-search");
+        if (input)
+          input.value = "";
+        this.updateTabHighlight();
+        this.renderGrid();
+      });
+    }
+    this.updateTabHighlight();
+  }
+  updateTabHighlight() {
+    let tabs = this.tabsEl.children;
+    for (let i = 0; i < tabs.length; i++)
+      tabs[i].toggleClass("is-active", !this.query && i === this.activeGroup);
+  }
+  renderGrid() {
+    this.gridEl.empty();
+    this.updateTabHighlight();
+    let items;
+    if (this.query) {
+      let terms = this.query.split(/\s+/);
+      items = getAllItems().filter((item) => {
+        let text2 = (item.name + " " + item.emoji).toLowerCase();
+        return terms.every((t) => text2.includes(t));
+      });
+    } else {
+      let group = GROUPS[this.activeGroup];
+      items = group.emojis.map((e) => ({ emoji: e, name: EMOJI_NAMES[e] || "" }));
+    }
+    if (items.length === 0) {
+      this.gridEl.createDiv({ cls: "vf-icon-empty", text: "Nothing found" });
+      return;
+    }
+    let fragment = document.createDocumentFragment();
+    for (let item of items) {
+      let cell = document.createElement("div");
+      cell.className = "vf-icon-cell";
+      cell.textContent = item.emoji;
+      cell.dataset.emoji = item.emoji;
+      if (item.name)
+        cell.title = item.name;
+      fragment.appendChild(cell);
+    }
+    this.gridEl.appendChild(fragment);
+  }
+};
+
+// components/Note.svelte
 function get_each_context(ctx, list, i) {
   const child_ctx = ctx.slice();
-  child_ctx[34] = list[i];
-  child_ctx[35] = list;
-  child_ctx[36] = i;
+  child_ctx[35] = list[i];
+  child_ctx[36] = list;
+  child_ctx[37] = i;
   return child_ctx;
 }
-function create_if_block_2(ctx) {
+function create_if_block_3(ctx) {
   let div;
   let collapsedIcon_action;
   let mounted;
@@ -2090,7 +4691,7 @@ function create_if_block_2(ctx) {
         div,
         "is-collapsed",
         /*isCollapsed*/
-        ctx[3]
+        ctx[4]
       );
     },
     m(target, anchor) {
@@ -2099,22 +4700,22 @@ function create_if_block_2(ctx) {
         dispose = [
           listen(div, "click", stop_propagation(
             /*click_handler*/
-            ctx[25]
+            ctx[26]
           )),
           action_destroyer(collapsedIcon_action = /*collapsedIcon*/
-          ctx[11].call(null, div))
+          ctx[12].call(null, div))
         ];
         mounted = true;
       }
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*isCollapsed*/
-      8) {
+      16) {
         toggle_class(
           div,
           "is-collapsed",
           /*isCollapsed*/
-          ctx2[3]
+          ctx2[4]
         );
       }
     },
@@ -2127,6 +4728,38 @@ function create_if_block_2(ctx) {
     }
   };
 }
+function create_if_block_2(ctx) {
+  let span;
+  let t;
+  return {
+    c() {
+      span = element("span");
+      t = text(
+        /*noteIcon*/
+        ctx[3]
+      );
+      attr(span, "class", "vf-note-icon");
+    },
+    m(target, anchor) {
+      insert(target, span, anchor);
+      append(span, t);
+    },
+    p(ctx2, dirty) {
+      if (dirty[0] & /*noteIcon*/
+      8)
+        set_data(
+          t,
+          /*noteIcon*/
+          ctx2[3]
+        );
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(span);
+      }
+    }
+  };
+}
 function create_if_block_1(ctx) {
   let span;
   let t;
@@ -2135,7 +4768,7 @@ function create_if_block_1(ctx) {
       span = element("span");
       t = text(
         /*childCounter*/
-        ctx[5]
+        ctx[6]
       );
       attr(span, "class", "vf-counter");
     },
@@ -2145,11 +4778,11 @@ function create_if_block_1(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*childCounter*/
-      32)
+      64)
         set_data(
           t,
           /*childCounter*/
-          ctx2[5]
+          ctx2[6]
         );
     },
     d(detaching) {
@@ -2169,11 +4802,11 @@ function create_if_block(ctx) {
   let dispose;
   let each_value = ensure_array_like(
     /*childList*/
-    ctx[6]
+    ctx[7]
   );
   const get_key = (ctx2) => (
     /*child*/
-    ctx2[34]
+    ctx2[35]
   );
   for (let i = 0; i < each_value.length; i += 1) {
     let child_ctx = get_each_context(ctx, each_value, i);
@@ -2202,13 +4835,13 @@ function create_if_block(ctx) {
             div,
             "introstart",
             /*expandTransitionStart*/
-            ctx[12]
+            ctx[13]
           ),
           listen(
             div,
             "introend",
             /*introend_handler*/
-            ctx[28]
+            ctx[29]
           )
         ];
         mounted = true;
@@ -2216,10 +4849,10 @@ function create_if_block(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*childList, build_path, children*/
-      8512) {
+      17024) {
         each_value = ensure_array_like(
           /*childList*/
-          ctx2[6]
+          ctx2[7]
         );
         group_outros();
         each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx2, each_value, each_1_lookup, div, outro_and_destroy_block, create_each_block, null, get_each_context);
@@ -2273,27 +4906,27 @@ function create_each_block(key_1, ctx) {
   let note_1;
   let child = (
     /*child*/
-    ctx[34]
+    ctx[35]
   );
   let current;
   const assign_note_1 = () => (
     /*note_1_binding*/
-    ctx[27](note_1, child)
+    ctx[28](note_1, child)
   );
   const unassign_note_1 = () => (
     /*note_1_binding*/
-    ctx[27](null, child)
+    ctx[28](null, child)
   );
   let note_1_props = {
     id: (
       /*child*/
-      ctx[34]
+      ctx[35]
     ),
     node_path: (
       /*build_path*/
-      ctx[13](
+      ctx[14](
         /*child*/
-        ctx[34]
+        ctx[35]
       )
     )
   };
@@ -2315,23 +4948,23 @@ function create_each_block(key_1, ctx) {
     p(new_ctx, dirty) {
       ctx = new_ctx;
       if (child !== /*child*/
-      ctx[34]) {
+      ctx[35]) {
         unassign_note_1();
         child = /*child*/
-        ctx[34];
+        ctx[35];
         assign_note_1();
       }
       const note_1_changes = {};
       if (dirty[0] & /*childList*/
-      64)
+      128)
         note_1_changes.id = /*child*/
-        ctx[34];
+        ctx[35];
       if (dirty[0] & /*childList*/
-      64)
+      128)
         note_1_changes.node_path = /*build_path*/
-        ctx[13](
+        ctx[14](
           /*child*/
-          ctx[34]
+          ctx[35]
         );
       note_1.$set(note_1_changes);
     },
@@ -2361,24 +4994,29 @@ function create_fragment(ctx) {
   let div0;
   let t1;
   let t2;
+  let t3;
   let div1_class_value;
   let div1_draggable_value;
-  let t3;
+  let t4;
   let current;
   let mounted;
   let dispose;
   let if_block0 = (
     /*childCounter*/
-    ctx[5] > 0 && create_if_block_2(ctx)
+    ctx[6] > 0 && create_if_block_3(ctx)
   );
   let if_block1 = (
-    /*childCounter*/
-    ctx[5] > 0 && create_if_block_1(ctx)
+    /*noteIcon*/
+    ctx[3] && create_if_block_2(ctx)
   );
   let if_block2 = (
     /*childCounter*/
-    ctx[5] > 0 && !/*isCollapsed*/
-    ctx[3] && create_if_block(ctx)
+    ctx[6] > 0 && create_if_block_1(ctx)
+  );
+  let if_block3 = (
+    /*childCounter*/
+    ctx[6] > 0 && !/*isCollapsed*/
+    ctx[4] && create_if_block(ctx)
   );
   return {
     c() {
@@ -2388,26 +5026,29 @@ function create_fragment(ctx) {
         if_block0.c();
       t0 = space();
       div0 = element("div");
-      t1 = text(
+      if (if_block1)
+        if_block1.c();
+      t1 = space();
+      t2 = text(
         /*title*/
         ctx[2]
       );
-      t2 = space();
-      if (if_block1)
-        if_block1.c();
       t3 = space();
       if (if_block2)
         if_block2.c();
+      t4 = space();
+      if (if_block3)
+        if_block3.c();
       attr(div0, "class", "tree-item-inner");
       attr(div1, "class", div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx[4] ? "vf-current-note" : ""));
+      (ctx[5] ? "vf-current-note" : ""));
       attr(div1, "draggable", div1_draggable_value = /*type*/
       ctx[1] === "sub_note");
       toggle_class(
         div1,
         "vf-drop-target",
         /*isDragOver*/
-        ctx[10]
+        ctx[11]
       );
       attr(div2, "class", "tree-item is-clickable");
     },
@@ -2418,14 +5059,17 @@ function create_fragment(ctx) {
         if_block0.m(div1, null);
       append(div1, t0);
       append(div1, div0);
-      append(div0, t1);
-      append(div1, t2);
       if (if_block1)
-        if_block1.m(div1, null);
-      append(div2, t3);
+        if_block1.m(div0, null);
+      append(div0, t1);
+      append(div0, t2);
+      append(div1, t3);
       if (if_block2)
-        if_block2.m(div2, null);
-      ctx[29](div2);
+        if_block2.m(div1, null);
+      append(div2, t4);
+      if (if_block3)
+        if_block3.m(div2, null);
+      ctx[30](div2);
       current = true;
       if (!mounted) {
         dispose = [
@@ -2433,35 +5077,35 @@ function create_fragment(ctx) {
             div1,
             "dragstart",
             /*handleDragStart*/
-            ctx[15]
+            ctx[16]
           ),
           listen(div1, "dragover", prevent_default(
             /*handleDragOver*/
-            ctx[16]
+            ctx[17]
           )),
           listen(
             div1,
             "dragleave",
             /*handleDragLeave*/
-            ctx[17]
+            ctx[18]
           ),
           listen(
             div1,
             "drop",
             /*handleDrop*/
-            ctx[18]
+            ctx[19]
           ),
           listen(
             div1,
             "contextmenu",
             /*handleContextMenu*/
-            ctx[19]
+            ctx[20]
           ),
           listen(
             div1,
             "click",
             /*click_handler_1*/
-            ctx[26]
+            ctx[27]
           )
         ];
         mounted = true;
@@ -2470,12 +5114,12 @@ function create_fragment(ctx) {
     p(ctx2, dirty) {
       if (
         /*childCounter*/
-        ctx2[5] > 0
+        ctx2[6] > 0
       ) {
         if (if_block0) {
           if_block0.p(ctx2, dirty);
         } else {
-          if_block0 = create_if_block_2(ctx2);
+          if_block0 = create_if_block_3(ctx2);
           if_block0.c();
           if_block0.m(div1, t0);
         }
@@ -2483,31 +5127,46 @@ function create_fragment(ctx) {
         if_block0.d(1);
         if_block0 = null;
       }
-      if (!current || dirty[0] & /*title*/
-      4)
-        set_data(
-          t1,
-          /*title*/
-          ctx2[2]
-        );
       if (
-        /*childCounter*/
-        ctx2[5] > 0
+        /*noteIcon*/
+        ctx2[3]
       ) {
         if (if_block1) {
           if_block1.p(ctx2, dirty);
         } else {
-          if_block1 = create_if_block_1(ctx2);
+          if_block1 = create_if_block_2(ctx2);
           if_block1.c();
-          if_block1.m(div1, null);
+          if_block1.m(div0, t1);
         }
       } else if (if_block1) {
         if_block1.d(1);
         if_block1 = null;
       }
+      if (!current || dirty[0] & /*title*/
+      4)
+        set_data(
+          t2,
+          /*title*/
+          ctx2[2]
+        );
+      if (
+        /*childCounter*/
+        ctx2[6] > 0
+      ) {
+        if (if_block2) {
+          if_block2.p(ctx2, dirty);
+        } else {
+          if_block2 = create_if_block_1(ctx2);
+          if_block2.c();
+          if_block2.m(div1, null);
+        }
+      } else if (if_block2) {
+        if_block2.d(1);
+        if_block2 = null;
+      }
       if (!current || dirty[0] & /*IsOpened*/
-      16 && div1_class_value !== (div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx2[4] ? "vf-current-note" : ""))) {
+      32 && div1_class_value !== (div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
+      (ctx2[5] ? "vf-current-note" : ""))) {
         attr(div1, "class", div1_class_value);
       }
       if (!current || dirty[0] & /*type*/
@@ -2516,35 +5175,35 @@ function create_fragment(ctx) {
         attr(div1, "draggable", div1_draggable_value);
       }
       if (!current || dirty[0] & /*IsOpened, isDragOver*/
-      1040) {
+      2080) {
         toggle_class(
           div1,
           "vf-drop-target",
           /*isDragOver*/
-          ctx2[10]
+          ctx2[11]
         );
       }
       if (
         /*childCounter*/
-        ctx2[5] > 0 && !/*isCollapsed*/
-        ctx2[3]
+        ctx2[6] > 0 && !/*isCollapsed*/
+        ctx2[4]
       ) {
-        if (if_block2) {
-          if_block2.p(ctx2, dirty);
+        if (if_block3) {
+          if_block3.p(ctx2, dirty);
           if (dirty[0] & /*childCounter, isCollapsed*/
-          40) {
-            transition_in(if_block2, 1);
+          80) {
+            transition_in(if_block3, 1);
           }
         } else {
-          if_block2 = create_if_block(ctx2);
-          if_block2.c();
-          transition_in(if_block2, 1);
-          if_block2.m(div2, null);
+          if_block3 = create_if_block(ctx2);
+          if_block3.c();
+          transition_in(if_block3, 1);
+          if_block3.m(div2, null);
         }
-      } else if (if_block2) {
+      } else if (if_block3) {
         group_outros();
-        transition_out(if_block2, 1, 1, () => {
-          if_block2 = null;
+        transition_out(if_block3, 1, 1, () => {
+          if_block3 = null;
         });
         check_outros();
       }
@@ -2552,11 +5211,11 @@ function create_fragment(ctx) {
     i(local) {
       if (current)
         return;
-      transition_in(if_block2);
+      transition_in(if_block3);
       current = true;
     },
     o(local) {
-      transition_out(if_block2);
+      transition_out(if_block3);
       current = false;
     },
     d(detaching) {
@@ -2569,7 +5228,9 @@ function create_fragment(ctx) {
         if_block1.d();
       if (if_block2)
         if_block2.d();
-      ctx[29](null);
+      if (if_block3)
+        if_block3.d();
+      ctx[30](null);
       mounted = false;
       run_all(dispose);
     }
@@ -2578,14 +5239,15 @@ function create_fragment(ctx) {
 function instance($$self, $$props, $$invalidate) {
   let $data;
   let $active_id;
-  component_subscribe($$self, data, ($$value) => $$invalidate(23, $data = $$value));
-  component_subscribe($$self, active_id, ($$value) => $$invalidate(24, $active_id = $$value));
+  component_subscribe($$self, data, ($$value) => $$invalidate(24, $data = $$value));
+  component_subscribe($$self, active_id, ($$value) => $$invalidate(25, $active_id = $$value));
   let { id = "unknown-link-id" } = $$props;
   let { type = "sub_note" } = $$props;
   let { node_path = [] } = $$props;
   let plugin2 = getPlugin();
   let note;
   let title = id;
+  let noteIcon = "";
   let isCollapsed = true;
   let IsOpened = false;
   let childCounter = 0;
@@ -2593,13 +5255,13 @@ function instance($$self, $$props, $$invalidate) {
   let myElement;
   const children2 = {};
   const collapsedIcon = function(node) {
-    node.appendChild((0, import_obsidian4.getIcon)("right-triangle"));
+    node.appendChild((0, import_obsidian5.getIcon)("right-triangle"));
   };
   let expandTransitionWaiter = Promise.resolve();
   let expandTransitionEnd;
   function expandTransitionStart() {
     expandTransitionWaiter = new Promise((resolve) => {
-      $$invalidate(9, expandTransitionEnd = resolve);
+      $$invalidate(10, expandTransitionEnd = resolve);
     });
   }
   function build_path(id2) {
@@ -2634,14 +5296,14 @@ function instance($$self, $$props, $$invalidate) {
     event.preventDefault();
     if (event.dataTransfer)
       event.dataTransfer.dropEffect = "move";
-    $$invalidate(10, isDragOver = true);
+    $$invalidate(11, isDragOver = true);
   }
   function handleDragLeave() {
-    $$invalidate(10, isDragOver = false);
+    $$invalidate(11, isDragOver = false);
   }
   function handleDrop(event) {
     event.preventDefault();
-    $$invalidate(10, isDragOver = false);
+    $$invalidate(11, isDragOver = false);
     if (!event.dataTransfer)
       return;
     let dragData;
@@ -2653,7 +5315,7 @@ function instance($$self, $$props, $$invalidate) {
     let draggedId = dragData.id;
     let oldParentId = dragData.parentId;
     if (draggedId === id || node_path.includes(draggedId)) {
-      new import_obsidian4.Notice("Can't move a folder into itself");
+      new import_obsidian5.Notice("Can't move a folder into itself");
       return;
     }
     let newParentId = null;
@@ -2668,7 +5330,7 @@ function instance($$self, $$props, $$invalidate) {
     if (type !== "sub_note" && type !== "top_dir")
       return;
     event.preventDefault();
-    const menu = new import_obsidian4.Menu();
+    const menu = new import_obsidian5.Menu();
     let folderId = type === "top_dir" ? null : id;
     menu.addItem((item) => {
       item.setTitle("Create note").setIcon("plus").onClick(() => {
@@ -2683,6 +5345,23 @@ function instance($$self, $$props, $$invalidate) {
       });
     }
     if (type === "sub_note") {
+      let file = plugin2.app.vault.getFileByPath(id);
+      if (file) {
+        menu.addItem((item) => {
+          item.setTitle("Manage icon").setIcon("image").onClick(() => {
+            new VF_IconPickerModal(
+              plugin2,
+              (icon) => {
+                let f = plugin2.app.vault.getFileByPath(id);
+                if (!f)
+                  return;
+                plugin2.yaml.set_icon(f, icon);
+                plugin2.update_data();
+              }
+            ).open();
+          });
+        });
+      }
       menu.addSeparator();
       menu.addItem((item) => {
         item.setTitle("Delete note").setIcon("trash-2").onClick(() => {
@@ -2700,7 +5379,7 @@ function instance($$self, $$props, $$invalidate) {
     menu.showAtMouseEvent(event);
   }
   const focusNotes = (pathNotes) => __awaiter(void 0, void 0, void 0, function* () {
-    $$invalidate(3, isCollapsed = false);
+    $$invalidate(4, isCollapsed = false);
     yield tick();
     let next = pathNotes.shift();
     if (pathNotes.length === 0)
@@ -2716,7 +5395,7 @@ function instance($$self, $$props, $$invalidate) {
     }
   });
   const click_handler = () => {
-    $$invalidate(3, isCollapsed = !isCollapsed);
+    $$invalidate(4, isCollapsed = !isCollapsed);
   };
   const click_handler_1 = (event) => {
     if (event.shiftKey) {
@@ -2727,13 +5406,13 @@ function instance($$self, $$props, $$invalidate) {
       openNote(id, true);
       return;
     }
-    $$invalidate(3, isCollapsed = false);
+    $$invalidate(4, isCollapsed = false);
     openNote(id);
   };
   function note_1_binding($$value, child) {
     binding_callbacks[$$value ? "unshift" : "push"](() => {
       children2[child] = $$value;
-      $$invalidate(8, children2);
+      $$invalidate(9, children2);
     });
   }
   const introend_handler = () => {
@@ -2742,7 +5421,7 @@ function instance($$self, $$props, $$invalidate) {
   function div2_binding($$value) {
     binding_callbacks[$$value ? "unshift" : "push"](() => {
       myElement = $$value;
-      $$invalidate(7, myElement);
+      $$invalidate(8, myElement);
     });
   }
   $$self.$$set = ($$props2) => {
@@ -2751,29 +5430,30 @@ function instance($$self, $$props, $$invalidate) {
     if ("type" in $$props2)
       $$invalidate(1, type = $$props2.type);
     if ("node_path" in $$props2)
-      $$invalidate(20, node_path = $$props2.node_path);
+      $$invalidate(21, node_path = $$props2.node_path);
   };
   $$self.$$.update = () => {
     if ($$self.$$.dirty[0] & /*id, $active_id, type, $data, note*/
-    29360131) {
+    58720259) {
       $: {
-        $$invalidate(4, IsOpened = id == $active_id);
+        $$invalidate(5, IsOpened = id == $active_id);
         if (type == "top_dir") {
           $$invalidate(2, title = "ROOT");
-          $$invalidate(5, childCounter = $data.top_list.length);
-          $$invalidate(6, childList = $data.top_list);
+          $$invalidate(6, childCounter = $data.top_list.length);
+          $$invalidate(7, childList = $data.top_list);
         }
         if (type == "orphan_dir") {
           $$invalidate(2, title = "Orphans");
-          $$invalidate(5, childCounter = $data.orphans_list.length);
-          $$invalidate(6, childList = $data.orphans_list);
+          $$invalidate(6, childCounter = $data.orphans_list.length);
+          $$invalidate(7, childList = $data.orphans_list);
         }
         if (type == "sub_note") {
-          $$invalidate(22, note = $data.note_list[id]);
+          $$invalidate(23, note = $data.note_list[id]);
           if (note) {
             $$invalidate(2, title = note.title);
-            $$invalidate(5, childCounter = note.count_children());
-            $$invalidate(6, childList = note.children);
+            $$invalidate(3, noteIcon = note.icon || "");
+            $$invalidate(6, childCounter = note.count_children());
+            $$invalidate(7, childList = note.children);
           }
         }
       }
@@ -2783,6 +5463,7 @@ function instance($$self, $$props, $$invalidate) {
     id,
     type,
     title,
+    noteIcon,
     isCollapsed,
     IsOpened,
     childCounter,
@@ -2824,15 +5505,15 @@ var Note = class extends SvelteComponent {
       {
         id: 0,
         type: 1,
-        node_path: 20,
-        focusNotes: 21
+        node_path: 21,
+        focusNotes: 22
       },
       null,
       [-1, -1]
     );
   }
   get focusNotes() {
-    return this.$$.ctx[21];
+    return this.$$.ctx[22];
   }
 };
 var Note_default = Note;
@@ -3055,7 +5736,7 @@ var Component_default = Component;
 // tree_view.ts
 var TREE_ICON = "folder-tree";
 var VIEW_TYPE_VF = "virt-folder-view";
-var VirtFolderView = class extends import_obsidian5.ItemView {
+var VirtFolderView = class extends import_obsidian6.ItemView {
   constructor(leaf, plugin2) {
     super(leaf);
     this.plugin = plugin2;
@@ -3082,14 +5763,14 @@ var VirtFolderView = class extends import_obsidian5.ItemView {
 };
 
 // yaml_parser.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 var YamlParser = class {
   constructor(app, plugin2) {
     this.app = app;
     this.plugin = plugin2;
   }
   showMessage(msg) {
-    new import_obsidian6.Notice(msg);
+    new import_obsidian7.Notice(msg);
   }
   _fm_add_link(front, selected, prop) {
     let file = this.app.vault.getFileByPath(selected);
@@ -3211,6 +5892,17 @@ var YamlParser = class {
     }
     return null;
   }
+  set_icon(file, icon) {
+    this.app.fileManager.processFrontMatter(file, (fm) => {
+      if (icon) {
+        fm["vf_icon"] = icon;
+        this.showMessage(`Icon set: ${icon}`);
+      } else {
+        delete fm["vf_icon"];
+        this.showMessage("Icon removed");
+      }
+    });
+  }
   move_to_folder(noteFile, yamlProp, oldParentPath, newParentPath) {
     this.app.fileManager.processFrontMatter(noteFile, (fm) => {
       if (oldParentPath) {
@@ -3229,7 +5921,7 @@ var YamlParser = class {
 };
 
 // main.ts
-var VirtFolderPlugin = class extends import_obsidian7.Plugin {
+var VirtFolderPlugin = class extends import_obsidian8.Plugin {
   constructor() {
     super(...arguments);
     this.onOpenFile = (file) => {
@@ -3241,19 +5933,19 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       }
     };
     this.onCreateFile = (file) => {
-      if (file instanceof import_obsidian7.TFile) {
+      if (file instanceof import_obsidian8.TFile) {
         this.data.onCreate(file);
         this.update_data();
       }
     };
     this.onDeleteFile = (file) => {
-      if (file instanceof import_obsidian7.TFile) {
+      if (file instanceof import_obsidian8.TFile) {
         this.data.onDelete(file);
         this.update_data();
       }
     };
     this.onRenameFile = (file, oldPath) => {
-      if (file instanceof import_obsidian7.TFile) {
+      if (file instanceof import_obsidian8.TFile) {
         this.data.onRename(file, oldPath);
         this.update_data();
       }
@@ -3313,6 +6005,14 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
         this.VF_RevealActiveFile();
       }
     });
+    this.addCommand({
+      id: "manage_icon",
+      name: "Manage icon",
+      icon: "image",
+      callback: () => {
+        this.VF_SetIcon();
+      }
+    });
     this.app.workspace.onLayoutReady(() => {
       this.data.onStartApp();
       this.update_data();
@@ -3329,16 +6029,24 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       this.registerEvent(this.app.vault.on("delete", this.onDeleteFile));
       this.registerEvent(this.app.vault.on("rename", this.onRenameFile));
       this.registerEvent(this.app.workspace.on("file-menu", (menu, file, source) => {
-        if (!(file instanceof import_obsidian7.TFile))
+        if (!(file instanceof import_obsidian8.TFile))
           return;
         menu.addItem((item) => {
           item.setTitle("Add to virtual folder").setIcon("folder-plus").onClick(() => {
             this.VF_AddFilesToFolder([file]);
           });
         });
+        menu.addItem((item) => {
+          item.setTitle("Manage icon").setIcon("image").onClick(() => {
+            new VF_IconPickerModal(this, (icon) => {
+              this.yaml.set_icon(file, icon);
+              this.update_data();
+            }).open();
+          });
+        });
       }));
       this.registerEvent(this.app.workspace.on("files-menu", (menu, files, source) => {
-        let tfiles = files.filter((f) => f instanceof import_obsidian7.TFile);
+        let tfiles = files.filter((f) => f instanceof import_obsidian8.TFile);
         if (tfiles.length === 0)
           return;
         menu.addItem((item) => {
@@ -3363,7 +6071,7 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       active_id.set("");
   }
   setActiveFile(file) {
-    if (file instanceof import_obsidian7.TFile) {
+    if (file instanceof import_obsidian8.TFile) {
       active_id.set(file.path);
     } else {
       active_id.set("");
@@ -3408,6 +6116,18 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
   }
   updateUsedTime(file_id) {
     this.base.note_list[file_id].utime = Date.now();
+  }
+  VF_SetIcon() {
+    let file = this.app.workspace.getActiveFile();
+    if (!file)
+      return;
+    new VF_IconPickerModal(this, (icon) => {
+      let activeFile = this.app.workspace.getActiveFile();
+      if (!activeFile)
+        return;
+      this.yaml.set_icon(activeFile, icon);
+      this.update_data();
+    }).open();
   }
   VF_AddFolder() {
     let file = this.app.workspace.getActiveFile();
@@ -3485,7 +6205,7 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
         return;
       }
       let ref = this.app.vault.on("create", async (file2) => {
-        if (!(file2 instanceof import_obsidian7.TFile))
+        if (!(file2 instanceof import_obsidian8.TFile))
           return;
         this.app.vault.offref(ref);
         if (parentId)
@@ -3534,7 +6254,7 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
       return;
     let doDelete = async () => {
       await this.app.vault.trash(file, true);
-      new import_obsidian7.Notice("Note deleted");
+      new import_obsidian8.Notice("Note deleted");
       this.update_data();
     };
     if (this.settings.confirmDelete) {
@@ -3565,7 +6285,7 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
         if (f)
           await this.app.vault.trash(f, true);
       }
-      new import_obsidian7.Notice(`${allIds.length} note(s) deleted`);
+      new import_obsidian8.Notice(`${allIds.length} note(s) deleted`);
       this.update_data();
     };
     new VF_ConfirmModal(this.app, doDelete, title, message).open();
@@ -3583,7 +6303,7 @@ var VirtFolderPlugin = class extends import_obsidian7.Plugin {
     this.update_data();
   }
 };
-var VF_ConfirmModal = class extends import_obsidian7.Modal {
+var VF_ConfirmModal = class extends import_obsidian8.Modal {
   constructor(app, onConfirm, title = "Delete note", message = "") {
     super(app);
     this.onConfirm = onConfirm;
@@ -3593,7 +6313,7 @@ var VF_ConfirmModal = class extends import_obsidian7.Modal {
   onOpen() {
     this.titleEl.setText(this.title);
     this.contentEl.createEl("p", { text: this.message });
-    new import_obsidian7.Setting(this.contentEl).addButton((btn) => {
+    new import_obsidian8.Setting(this.contentEl).addButton((btn) => {
       btn.setButtonText("Delete").setWarning().onClick(() => {
         this.close();
         this.onConfirm();
