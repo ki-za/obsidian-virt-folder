@@ -1485,9 +1485,9 @@ var BaseScanner = class {
       }
     }
     if (metadata.frontmatter) {
-      if ("IsPinned" in metadata.frontmatter) {
-        let value = metadata.frontmatter["IsPinned"];
-        this.note_list[file_id].is_pinned = value != "0" && value != "false";
+      if ("vf_pinned" in metadata.frontmatter) {
+        let value = metadata.frontmatter["vf_pinned"];
+        this.note_list[file_id].is_pinned = value != "0" && value != "false" && value != false;
       }
       if ("vf_icon" in metadata.frontmatter) {
         let value = metadata.frontmatter["vf_icon"];
@@ -1523,21 +1523,6 @@ var BaseScanner = class {
         this.top_list.push(note.id);
       }
     }
-  }
-  old_l_sort(links) {
-    let pinned = [];
-    let normal = [];
-    for (let id of links) {
-      let note = this.note_list[id];
-      if (note.is_pinned) {
-        pinned.push(id);
-      } else {
-        normal.push(id);
-      }
-    }
-    pinned.sort();
-    normal.sort();
-    return pinned.concat(normal);
   }
   l_sort(links) {
     let links_copy = [...links];
@@ -1577,7 +1562,15 @@ var BaseScanner = class {
     }
     if (sortRev)
       links_copy.reverse();
-    return links_copy;
+    let pinned = links_copy.filter((id) => {
+      var _a;
+      return (_a = this.note_list[id]) == null ? void 0 : _a.is_pinned;
+    });
+    let normal = links_copy.filter((id) => {
+      var _a;
+      return !((_a = this.note_list[id]) == null ? void 0 : _a.is_pinned);
+    });
+    return pinned.concat(normal);
   }
   sort_links() {
     for (let id in this.note_list) {
@@ -1830,10 +1823,10 @@ var BaseScanner = class {
     let metadata = this.app.metadataCache.getFileCache(file);
     if (!metadata || !metadata.frontmatter)
       return false;
-    if (!("IsPinned" in metadata.frontmatter))
+    if (!("vf_pinned" in metadata.frontmatter))
       return false;
-    let value = metadata.frontmatter["IsPinned"];
-    return value != "0" && value != "false";
+    let value = metadata.frontmatter["vf_pinned"];
+    return value != "0" && value != "false" && value != false;
   }
   _read_expected_icon(file) {
     let metadata = this.app.metadataCache.getFileCache(file);
@@ -5361,6 +5354,16 @@ function instance($$self, $$props, $$invalidate) {
             ).open();
           });
         });
+        let isPinned = note ? note.is_pinned : false;
+        menu.addItem((item) => {
+          item.setTitle(isPinned ? "Unpin note" : "Pin note").setIcon("pin").onClick(() => {
+            let f = plugin2.app.vault.getFileByPath(id);
+            if (!f)
+              return;
+            plugin2.yaml.toggle_pin(f, !isPinned);
+            plugin2.update_data();
+          });
+        });
       }
       menu.addSeparator();
       menu.addItem((item) => {
@@ -5903,6 +5906,17 @@ var YamlParser = class {
       }
     });
   }
+  toggle_pin(file, pin) {
+    this.app.fileManager.processFrontMatter(file, (fm) => {
+      if (pin) {
+        fm["vf_pinned"] = true;
+        this.showMessage("Note pinned");
+      } else {
+        delete fm["vf_pinned"];
+        this.showMessage("Note unpinned");
+      }
+    });
+  }
   move_to_folder(noteFile, yamlProp, oldParentPath, newParentPath) {
     this.app.fileManager.processFrontMatter(noteFile, (fm) => {
       if (oldParentPath) {
@@ -6040,6 +6054,14 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
         this.VF_SetIcon();
       }
     });
+    this.addCommand({
+      id: "pin_note",
+      name: "Pin note",
+      icon: "pin",
+      callback: () => {
+        this.VF_TogglePin();
+      }
+    });
     this.app.workspace.onLayoutReady(() => {
       this.data.onStartApp();
       this.update_data();
@@ -6069,6 +6091,14 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
               this.yaml.set_icon(file, icon);
               this.update_data();
             }).open();
+          });
+        });
+        let note = this.base.note_by_id(file.path);
+        let isPinned = note ? note.is_pinned : false;
+        menu.addItem((item) => {
+          item.setTitle(isPinned ? "Unpin note" : "Pin note").setIcon("pin").onClick(() => {
+            this.yaml.toggle_pin(file, !isPinned);
+            this.update_data();
           });
         });
       }));
@@ -6143,6 +6173,15 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
   }
   updateUsedTime(file_id) {
     this.base.note_list[file_id].utime = Date.now();
+  }
+  VF_TogglePin() {
+    let file = this.app.workspace.getActiveFile();
+    if (!file)
+      return;
+    let note = this.base.note_by_id(file.path);
+    let isPinned = note ? note.is_pinned : false;
+    this.yaml.toggle_pin(file, !isPinned);
+    this.update_data();
   }
   VF_SetIcon() {
     let file = this.app.workspace.getActiveFile();

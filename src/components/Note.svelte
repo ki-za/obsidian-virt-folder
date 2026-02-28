@@ -203,6 +203,18 @@
 							}).open();
 						});
 				});
+
+				let isPinned = note ? note.is_pinned : false;
+				menu.addItem((item) => {
+					item.setTitle(isPinned ? 'Unpin note' : 'Pin note')
+						.setIcon('pin')
+						.onClick(() => {
+							let f = plugin.app.vault.getFileByPath(id);
+							if(!f) return;
+							plugin.yaml.toggle_pin(f, !isPinned);
+							plugin.update_data();
+						});
+				});
 			}
 
 			menu.addSeparator();

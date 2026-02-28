@@ -190,10 +190,10 @@ export class BaseScanner
 
         if(metadata.frontmatter)
         {
-            if("IsPinned" in metadata.frontmatter)
+            if("vf_pinned" in metadata.frontmatter)
             {
-                let value = metadata.frontmatter["IsPinned"];
-                this.note_list[file_id].is_pinned = (value != "0" && value != "false");
+                let value = metadata.frontmatter["vf_pinned"];
+                this.note_list[file_id].is_pinned = (value != "0" && value != "false" && value != false);
             }
 
             if("vf_icon" in metadata.frontmatter)
@@ -249,32 +249,6 @@ export class BaseScanner
         }
     }
 
-    old_l_sort(links: string[])
-	{
-		let pinned = [];
-		let normal = [];
-
-		// cut array into pinned and normal items
-
-		for(let id of links)
-		{
-            let note = this.note_list[id];
-
-        	if(note.is_pinned)
-			{
-				pinned.push(id);
-			}
-			else
-			{
-				normal.push(id);
-			}
-		}
-
-		pinned.sort();
-		normal.sort();
-		return pinned.concat(normal);
-	}
-
     l_sort(links: string[])
 	{
         let links_copy: string[] = [...links];
@@ -289,7 +263,7 @@ export class BaseScanner
         if(sortBy == SortTypes.note_title)
         {
             links_copy.sort(
-                (a,b) => 
+                (a,b) =>
                 {
                     a = this.link_to_title(a);
                     b = this.link_to_title(b);
@@ -316,7 +290,10 @@ export class BaseScanner
 
         if(sortRev) links_copy.reverse();
 
-        return links_copy;
+        // pinned notes go first, preserving sort order
+        let pinned = links_copy.filter(id => this.note_list[id]?.is_pinned);
+        let normal = links_copy.filter(id => !this.note_list[id]?.is_pinned);
+        return pinned.concat(normal);
     }
 
     sort_links()
@@ -662,9 +639,9 @@ export class BaseScanner
     {
         let metadata = this.app.metadataCache.getFileCache(file);
         if(!metadata || !metadata.frontmatter) return false;
-        if(!("IsPinned" in metadata.frontmatter)) return false;
-        let value = metadata.frontmatter["IsPinned"];
-        return (value != "0" && value != "false");
+        if(!("vf_pinned" in metadata.frontmatter)) return false;
+        let value = metadata.frontmatter["vf_pinned"];
+        return (value != "0" && value != "false" && value != false);
     }
 
     _read_expected_icon(file: TFile): string

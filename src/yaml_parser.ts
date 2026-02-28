@@ -182,6 +182,22 @@ export class YamlParser
         });
     }
 
+    toggle_pin(file: TFile, pin: boolean)
+    {
+        this.app.fileManager.processFrontMatter(file, (fm) => {
+            if(pin)
+            {
+                fm['vf_pinned'] = true;
+                this.showMessage('Note pinned');
+            }
+            else
+            {
+                delete fm['vf_pinned'];
+                this.showMessage('Note unpinned');
+            }
+        });
+    }
+
     move_to_folder(noteFile:TFile, yamlProp:string, oldParentPath:string|null, newParentPath:string|null)
     {
         this.app.fileManager.processFrontMatter(noteFile, (fm) =>

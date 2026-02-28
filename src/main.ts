@@ -112,6 +112,15 @@ export default class VirtFolderPlugin extends Plugin
 			},
 		});
 
+		this.addCommand({
+			id: "pin_note",
+			name: "Pin note",
+			icon: "pin",
+			callback: () => {
+				this.VF_TogglePin();
+			},
+		});
+
 		this.app.workspace.onLayoutReady(() =>
 		{
 			// reactive
@@ -150,6 +159,16 @@ export default class VirtFolderPlugin extends Plugin
 								this.yaml.set_icon(file, icon);
 								this.update_data();
 							}).open();
+						});
+				});
+				let note = this.base.note_by_id(file.path);
+				let isPinned = note ? note.is_pinned : false;
+				menu.addItem((item) => {
+					item.setTitle(isPinned ? 'Unpin note' : 'Pin note')
+						.setIcon('pin')
+						.onClick(() => {
+							this.yaml.toggle_pin(file, !isPinned);
+							this.update_data();
 						});
 				});
 			}));
@@ -294,6 +313,17 @@ export default class VirtFolderPlugin extends Plugin
     {
         this.base.note_list[file_id].utime = Date.now();
     }
+
+	VF_TogglePin()
+	{
+		let file = this.app.workspace.getActiveFile();
+		if(!file) return;
+
+		let note = this.base.note_by_id(file.path);
+		let isPinned = note ? note.is_pinned : false;
+		this.yaml.toggle_pin(file, !isPinned);
+		this.update_data();
+	}
 
 	VF_SetIcon()
 	{
