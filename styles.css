@@ -52,6 +52,13 @@
     align-items: center;
 }
 
+.vf-pin-icon {
+    flex-shrink: 0;
+    margin-left: 2px;
+    display: inline-flex;
+    align-items: center;
+}
+
 /* Icon picker modal */
 .vf-icon-modal .modal-content {
     padding: 0 12px 12px;

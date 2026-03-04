@@ -4666,12 +4666,12 @@ var VF_IconPickerModal = class extends import_obsidian4.Modal {
 // components/Note.svelte
 function get_each_context(ctx, list, i) {
   const child_ctx = ctx.slice();
-  child_ctx[35] = list[i];
-  child_ctx[36] = list;
-  child_ctx[37] = i;
+  child_ctx[36] = list[i];
+  child_ctx[37] = list;
+  child_ctx[38] = i;
   return child_ctx;
 }
-function create_if_block_3(ctx) {
+function create_if_block_4(ctx) {
   let div;
   let collapsedIcon_action;
   let mounted;
@@ -4684,7 +4684,7 @@ function create_if_block_3(ctx) {
         div,
         "is-collapsed",
         /*isCollapsed*/
-        ctx[4]
+        ctx[5]
       );
     },
     m(target, anchor) {
@@ -4693,22 +4693,22 @@ function create_if_block_3(ctx) {
         dispose = [
           listen(div, "click", stop_propagation(
             /*click_handler*/
-            ctx[26]
+            ctx[27]
           )),
           action_destroyer(collapsedIcon_action = /*collapsedIcon*/
-          ctx[12].call(null, div))
+          ctx[13].call(null, div))
         ];
         mounted = true;
       }
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*isCollapsed*/
-      16) {
+      32) {
         toggle_class(
           div,
           "is-collapsed",
           /*isCollapsed*/
-          ctx2[4]
+          ctx2[5]
         );
       }
     },
@@ -4721,7 +4721,7 @@ function create_if_block_3(ctx) {
     }
   };
 }
-function create_if_block_2(ctx) {
+function create_if_block_3(ctx) {
   let span;
   let t;
   return {
@@ -4753,6 +4753,24 @@ function create_if_block_2(ctx) {
     }
   };
 }
+function create_if_block_2(ctx) {
+  let span;
+  return {
+    c() {
+      span = element("span");
+      span.textContent = "\u{1F4CC}";
+      attr(span, "class", "vf-pin-icon");
+    },
+    m(target, anchor) {
+      insert(target, span, anchor);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(span);
+      }
+    }
+  };
+}
 function create_if_block_1(ctx) {
   let span;
   let t;
@@ -4761,7 +4779,7 @@ function create_if_block_1(ctx) {
       span = element("span");
       t = text(
         /*childCounter*/
-        ctx[6]
+        ctx[7]
       );
       attr(span, "class", "vf-counter");
     },
@@ -4771,11 +4789,11 @@ function create_if_block_1(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*childCounter*/
-      64)
+      128)
         set_data(
           t,
           /*childCounter*/
-          ctx2[6]
+          ctx2[7]
         );
     },
     d(detaching) {
@@ -4795,11 +4813,11 @@ function create_if_block(ctx) {
   let dispose;
   let each_value = ensure_array_like(
     /*childList*/
-    ctx[7]
+    ctx[8]
   );
   const get_key = (ctx2) => (
     /*child*/
-    ctx2[35]
+    ctx2[36]
   );
   for (let i = 0; i < each_value.length; i += 1) {
     let child_ctx = get_each_context(ctx, each_value, i);
@@ -4828,13 +4846,13 @@ function create_if_block(ctx) {
             div,
             "introstart",
             /*expandTransitionStart*/
-            ctx[13]
+            ctx[14]
           ),
           listen(
             div,
             "introend",
             /*introend_handler*/
-            ctx[29]
+            ctx[30]
           )
         ];
         mounted = true;
@@ -4842,10 +4860,10 @@ function create_if_block(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*childList, build_path, children*/
-      17024) {
+      34048) {
         each_value = ensure_array_like(
           /*childList*/
-          ctx2[7]
+          ctx2[8]
         );
         group_outros();
         each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx2, each_value, each_1_lookup, div, outro_and_destroy_block, create_each_block, null, get_each_context);
@@ -4899,27 +4917,27 @@ function create_each_block(key_1, ctx) {
   let note_1;
   let child = (
     /*child*/
-    ctx[35]
+    ctx[36]
   );
   let current;
   const assign_note_1 = () => (
     /*note_1_binding*/
-    ctx[28](note_1, child)
+    ctx[29](note_1, child)
   );
   const unassign_note_1 = () => (
     /*note_1_binding*/
-    ctx[28](null, child)
+    ctx[29](null, child)
   );
   let note_1_props = {
     id: (
       /*child*/
-      ctx[35]
+      ctx[36]
     ),
     node_path: (
       /*build_path*/
-      ctx[14](
+      ctx[15](
         /*child*/
-        ctx[35]
+        ctx[36]
       )
     )
   };
@@ -4941,23 +4959,23 @@ function create_each_block(key_1, ctx) {
     p(new_ctx, dirty) {
       ctx = new_ctx;
       if (child !== /*child*/
-      ctx[35]) {
+      ctx[36]) {
         unassign_note_1();
         child = /*child*/
-        ctx[35];
+        ctx[36];
         assign_note_1();
       }
       const note_1_changes = {};
       if (dirty[0] & /*childList*/
-      128)
+      256)
         note_1_changes.id = /*child*/
-        ctx[35];
+        ctx[36];
       if (dirty[0] & /*childList*/
-      128)
+      256)
         note_1_changes.node_path = /*build_path*/
-        ctx[14](
+        ctx[15](
           /*child*/
-          ctx[35]
+          ctx[36]
         );
       note_1.$set(note_1_changes);
     },
@@ -4988,28 +5006,33 @@ function create_fragment(ctx) {
   let t1;
   let t2;
   let t3;
+  let t4;
   let div1_class_value;
   let div1_draggable_value;
-  let t4;
+  let t5;
   let current;
   let mounted;
   let dispose;
   let if_block0 = (
     /*childCounter*/
-    ctx[6] > 0 && create_if_block_3(ctx)
+    ctx[7] > 0 && create_if_block_4(ctx)
   );
   let if_block1 = (
     /*noteIcon*/
-    ctx[3] && create_if_block_2(ctx)
+    ctx[3] && create_if_block_3(ctx)
   );
   let if_block2 = (
-    /*childCounter*/
-    ctx[6] > 0 && create_if_block_1(ctx)
+    /*isPinned*/
+    ctx[4] && create_if_block_2(ctx)
   );
   let if_block3 = (
     /*childCounter*/
-    ctx[6] > 0 && !/*isCollapsed*/
-    ctx[4] && create_if_block(ctx)
+    ctx[7] > 0 && create_if_block_1(ctx)
+  );
+  let if_block4 = (
+    /*childCounter*/
+    ctx[7] > 0 && !/*isCollapsed*/
+    ctx[5] && create_if_block(ctx)
   );
   return {
     c() {
@@ -5032,16 +5055,19 @@ function create_fragment(ctx) {
       t4 = space();
       if (if_block3)
         if_block3.c();
+      t5 = space();
+      if (if_block4)
+        if_block4.c();
       attr(div0, "class", "tree-item-inner");
       attr(div1, "class", div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx[5] ? "vf-current-note" : ""));
+      (ctx[6] ? "vf-current-note" : ""));
       attr(div1, "draggable", div1_draggable_value = /*type*/
       ctx[1] === "sub_note");
       toggle_class(
         div1,
         "vf-drop-target",
         /*isDragOver*/
-        ctx[11]
+        ctx[12]
       );
       attr(div2, "class", "tree-item is-clickable");
     },
@@ -5056,13 +5082,16 @@ function create_fragment(ctx) {
         if_block1.m(div0, null);
       append(div0, t1);
       append(div0, t2);
-      append(div1, t3);
+      append(div0, t3);
       if (if_block2)
-        if_block2.m(div1, null);
-      append(div2, t4);
+        if_block2.m(div0, null);
+      append(div1, t4);
       if (if_block3)
-        if_block3.m(div2, null);
-      ctx[30](div2);
+        if_block3.m(div1, null);
+      append(div2, t5);
+      if (if_block4)
+        if_block4.m(div2, null);
+      ctx[31](div2);
       current = true;
       if (!mounted) {
         dispose = [
@@ -5070,35 +5099,35 @@ function create_fragment(ctx) {
             div1,
             "dragstart",
             /*handleDragStart*/
-            ctx[16]
+            ctx[17]
           ),
           listen(div1, "dragover", prevent_default(
             /*handleDragOver*/
-            ctx[17]
+            ctx[18]
           )),
           listen(
             div1,
             "dragleave",
             /*handleDragLeave*/
-            ctx[18]
+            ctx[19]
           ),
           listen(
             div1,
             "drop",
             /*handleDrop*/
-            ctx[19]
+            ctx[20]
           ),
           listen(
             div1,
             "contextmenu",
             /*handleContextMenu*/
-            ctx[20]
+            ctx[21]
           ),
           listen(
             div1,
             "click",
             /*click_handler_1*/
-            ctx[27]
+            ctx[28]
           )
         ];
         mounted = true;
@@ -5107,12 +5136,12 @@ function create_fragment(ctx) {
     p(ctx2, dirty) {
       if (
         /*childCounter*/
-        ctx2[6] > 0
+        ctx2[7] > 0
       ) {
         if (if_block0) {
           if_block0.p(ctx2, dirty);
         } else {
-          if_block0 = create_if_block_3(ctx2);
+          if_block0 = create_if_block_4(ctx2);
           if_block0.c();
           if_block0.m(div1, t0);
         }
@@ -5127,7 +5156,7 @@ function create_fragment(ctx) {
         if (if_block1) {
           if_block1.p(ctx2, dirty);
         } else {
-          if_block1 = create_if_block_2(ctx2);
+          if_block1 = create_if_block_3(ctx2);
           if_block1.c();
           if_block1.m(div0, t1);
         }
@@ -5143,23 +5172,37 @@ function create_fragment(ctx) {
           ctx2[2]
         );
       if (
-        /*childCounter*/
-        ctx2[6] > 0
+        /*isPinned*/
+        ctx2[4]
       ) {
         if (if_block2) {
-          if_block2.p(ctx2, dirty);
         } else {
-          if_block2 = create_if_block_1(ctx2);
+          if_block2 = create_if_block_2(ctx2);
           if_block2.c();
-          if_block2.m(div1, null);
+          if_block2.m(div0, null);
         }
       } else if (if_block2) {
         if_block2.d(1);
         if_block2 = null;
       }
+      if (
+        /*childCounter*/
+        ctx2[7] > 0
+      ) {
+        if (if_block3) {
+          if_block3.p(ctx2, dirty);
+        } else {
+          if_block3 = create_if_block_1(ctx2);
+          if_block3.c();
+          if_block3.m(div1, null);
+        }
+      } else if (if_block3) {
+        if_block3.d(1);
+        if_block3 = null;
+      }
       if (!current || dirty[0] & /*IsOpened*/
-      32 && div1_class_value !== (div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx2[5] ? "vf-current-note" : ""))) {
+      64 && div1_class_value !== (div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
+      (ctx2[6] ? "vf-current-note" : ""))) {
         attr(div1, "class", div1_class_value);
       }
       if (!current || dirty[0] & /*type*/
@@ -5168,35 +5211,35 @@ function create_fragment(ctx) {
         attr(div1, "draggable", div1_draggable_value);
       }
       if (!current || dirty[0] & /*IsOpened, isDragOver*/
-      2080) {
+      4160) {
         toggle_class(
           div1,
           "vf-drop-target",
           /*isDragOver*/
-          ctx2[11]
+          ctx2[12]
         );
       }
       if (
         /*childCounter*/
-        ctx2[6] > 0 && !/*isCollapsed*/
-        ctx2[4]
+        ctx2[7] > 0 && !/*isCollapsed*/
+        ctx2[5]
       ) {
-        if (if_block3) {
-          if_block3.p(ctx2, dirty);
+        if (if_block4) {
+          if_block4.p(ctx2, dirty);
           if (dirty[0] & /*childCounter, isCollapsed*/
-          80) {
-            transition_in(if_block3, 1);
+          160) {
+            transition_in(if_block4, 1);
           }
         } else {
-          if_block3 = create_if_block(ctx2);
-          if_block3.c();
-          transition_in(if_block3, 1);
-          if_block3.m(div2, null);
+          if_block4 = create_if_block(ctx2);
+          if_block4.c();
+          transition_in(if_block4, 1);
+          if_block4.m(div2, null);
         }
-      } else if (if_block3) {
+      } else if (if_block4) {
         group_outros();
-        transition_out(if_block3, 1, 1, () => {
-          if_block3 = null;
+        transition_out(if_block4, 1, 1, () => {
+          if_block4 = null;
         });
         check_outros();
       }
@@ -5204,11 +5247,11 @@ function create_fragment(ctx) {
     i(local) {
       if (current)
         return;
-      transition_in(if_block3);
+      transition_in(if_block4);
       current = true;
     },
     o(local) {
-      transition_out(if_block3);
+      transition_out(if_block4);
       current = false;
     },
     d(detaching) {
@@ -5223,7 +5266,9 @@ function create_fragment(ctx) {
         if_block2.d();
       if (if_block3)
         if_block3.d();
-      ctx[30](null);
+      if (if_block4)
+        if_block4.d();
+      ctx[31](null);
       mounted = false;
       run_all(dispose);
     }
@@ -5232,8 +5277,8 @@ function create_fragment(ctx) {
 function instance($$self, $$props, $$invalidate) {
   let $data;
   let $active_id;
-  component_subscribe($$self, data, ($$value) => $$invalidate(24, $data = $$value));
-  component_subscribe($$self, active_id, ($$value) => $$invalidate(25, $active_id = $$value));
+  component_subscribe($$self, data, ($$value) => $$invalidate(25, $data = $$value));
+  component_subscribe($$self, active_id, ($$value) => $$invalidate(26, $active_id = $$value));
   let { id = "unknown-link-id" } = $$props;
   let { type = "sub_note" } = $$props;
   let { node_path = [] } = $$props;
@@ -5241,6 +5286,7 @@ function instance($$self, $$props, $$invalidate) {
   let note;
   let title = id;
   let noteIcon = "";
+  let isPinned = false;
   let isCollapsed = true;
   let IsOpened = false;
   let childCounter = 0;
@@ -5254,7 +5300,7 @@ function instance($$self, $$props, $$invalidate) {
   let expandTransitionEnd;
   function expandTransitionStart() {
     expandTransitionWaiter = new Promise((resolve) => {
-      $$invalidate(10, expandTransitionEnd = resolve);
+      $$invalidate(11, expandTransitionEnd = resolve);
     });
   }
   function build_path(id2) {
@@ -5289,14 +5335,14 @@ function instance($$self, $$props, $$invalidate) {
     event.preventDefault();
     if (event.dataTransfer)
       event.dataTransfer.dropEffect = "move";
-    $$invalidate(11, isDragOver = true);
+    $$invalidate(12, isDragOver = true);
   }
   function handleDragLeave() {
-    $$invalidate(11, isDragOver = false);
+    $$invalidate(12, isDragOver = false);
   }
   function handleDrop(event) {
     event.preventDefault();
-    $$invalidate(11, isDragOver = false);
+    $$invalidate(12, isDragOver = false);
     if (!event.dataTransfer)
       return;
     let dragData;
@@ -5354,13 +5400,13 @@ function instance($$self, $$props, $$invalidate) {
             ).open();
           });
         });
-        let isPinned = note ? note.is_pinned : false;
+        let isPinned2 = note ? note.is_pinned : false;
         menu.addItem((item) => {
-          item.setTitle(isPinned ? "Unpin note" : "Pin note").setIcon("pin").onClick(() => {
+          item.setTitle(isPinned2 ? "Unpin note" : "Pin note").setIcon("pin").onClick(() => {
             let f = plugin2.app.vault.getFileByPath(id);
             if (!f)
               return;
-            plugin2.yaml.toggle_pin(f, !isPinned);
+            plugin2.yaml.toggle_pin(f, !isPinned2);
             plugin2.update_data();
           });
         });
@@ -5382,7 +5428,7 @@ function instance($$self, $$props, $$invalidate) {
     menu.showAtMouseEvent(event);
   }
   const focusNotes = (pathNotes) => __awaiter(void 0, void 0, void 0, function* () {
-    $$invalidate(4, isCollapsed = false);
+    $$invalidate(5, isCollapsed = false);
     yield tick();
     let next = pathNotes.shift();
     if (pathNotes.length === 0)
@@ -5398,7 +5444,7 @@ function instance($$self, $$props, $$invalidate) {
     }
   });
   const click_handler = () => {
-    $$invalidate(4, isCollapsed = !isCollapsed);
+    $$invalidate(5, isCollapsed = !isCollapsed);
   };
   const click_handler_1 = (event) => {
     if (event.shiftKey) {
@@ -5409,13 +5455,13 @@ function instance($$self, $$props, $$invalidate) {
       openNote(id, true);
       return;
     }
-    $$invalidate(4, isCollapsed = false);
+    $$invalidate(5, isCollapsed = false);
     openNote(id);
   };
   function note_1_binding($$value, child) {
     binding_callbacks[$$value ? "unshift" : "push"](() => {
       children2[child] = $$value;
-      $$invalidate(9, children2);
+      $$invalidate(10, children2);
     });
   }
   const introend_handler = () => {
@@ -5424,7 +5470,7 @@ function instance($$self, $$props, $$invalidate) {
   function div2_binding($$value) {
     binding_callbacks[$$value ? "unshift" : "push"](() => {
       myElement = $$value;
-      $$invalidate(8, myElement);
+      $$invalidate(9, myElement);
     });
   }
   $$self.$$set = ($$props2) => {
@@ -5433,30 +5479,31 @@ function instance($$self, $$props, $$invalidate) {
     if ("type" in $$props2)
       $$invalidate(1, type = $$props2.type);
     if ("node_path" in $$props2)
-      $$invalidate(21, node_path = $$props2.node_path);
+      $$invalidate(22, node_path = $$props2.node_path);
   };
   $$self.$$.update = () => {
     if ($$self.$$.dirty[0] & /*id, $active_id, type, $data, note*/
-    58720259) {
+    117440515) {
       $: {
-        $$invalidate(5, IsOpened = id == $active_id);
+        $$invalidate(6, IsOpened = id == $active_id);
         if (type == "top_dir") {
           $$invalidate(2, title = "ROOT");
-          $$invalidate(6, childCounter = $data.top_list.length);
-          $$invalidate(7, childList = $data.top_list);
+          $$invalidate(7, childCounter = $data.top_list.length);
+          $$invalidate(8, childList = $data.top_list);
         }
         if (type == "orphan_dir") {
           $$invalidate(2, title = "Orphans");
-          $$invalidate(6, childCounter = $data.orphans_list.length);
-          $$invalidate(7, childList = $data.orphans_list);
+          $$invalidate(7, childCounter = $data.orphans_list.length);
+          $$invalidate(8, childList = $data.orphans_list);
         }
         if (type == "sub_note") {
-          $$invalidate(23, note = $data.note_list[id]);
+          $$invalidate(24, note = $data.note_list[id]);
           if (note) {
             $$invalidate(2, title = note.title);
             $$invalidate(3, noteIcon = note.icon || "");
-            $$invalidate(6, childCounter = note.count_children());
-            $$invalidate(7, childList = note.children);
+            $$invalidate(4, isPinned = note.is_pinned);
+            $$invalidate(7, childCounter = note.count_children());
+            $$invalidate(8, childList = note.children);
           }
         }
       }
@@ -5467,6 +5514,7 @@ function instance($$self, $$props, $$invalidate) {
     type,
     title,
     noteIcon,
+    isPinned,
     isCollapsed,
     IsOpened,
     childCounter,
@@ -5508,15 +5556,15 @@ var Note = class extends SvelteComponent {
       {
         id: 0,
         type: 1,
-        node_path: 21,
-        focusNotes: 22
+        node_path: 22,
+        focusNotes: 23
       },
       null,
       [-1, -1]
     );
   }
   get focusNotes() {
-    return this.$$.ctx[22];
+    return this.$$.ctx[23];
   }
 };
 var Note_default = Note;

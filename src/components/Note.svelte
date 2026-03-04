@@ -20,6 +20,7 @@
 
 	let title = id;
 	let noteIcon = '';
+	let isPinned = false;
 	let isCollapsed = true;
 	let IsOpened = false;
 
@@ -54,6 +55,7 @@
 			{
 				title = note.title;
 				noteIcon = note.icon || '';
+				isPinned = note.is_pinned;
 				childCounter = note.count_children();
 				childList = note.children;
 			}
@@ -63,6 +65,7 @@
 	const collapsedIcon: Action = function (node) {
 	    node.appendChild(getIcon("right-triangle")!);
     };
+
 
 	let expandTransitionWaiter: Promise<void> = Promise.resolve();
 	let expandTransitionEnd: (value: void) => void;
@@ -322,6 +325,9 @@
 				<span class="vf-note-icon">{noteIcon}</span>
 			{/if}
 			{title}
+			{#if isPinned}
+				<span class="vf-pin-icon">📌</span>
+			{/if}
 		</div>
 
     {#if childCounter > 0}
