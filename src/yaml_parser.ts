@@ -171,12 +171,12 @@ export class YamlParser
         this.app.fileManager.processFrontMatter(file, (fm) => {
             if(icon)
             {
-                fm['vf_icon'] = icon;
+                fm[this.plugin.settings.iconProp] = icon;
                 this.showMessage(`Icon set: ${icon}`);
             }
             else
             {
-                delete fm['vf_icon'];
+                delete fm[this.plugin.settings.iconProp];
                 this.showMessage('Icon removed');
             }
         });

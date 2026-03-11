@@ -14,6 +14,7 @@ export interface VirtFolderSettings
 	ignorePath: string;
 	propertyName: string;
 	titleProp: string;
+	iconProp: string;
 	cmdShowTitle: boolean;
 	sortTreeBy: SortTypes;
 	sortTreeRev: boolean;
@@ -28,6 +29,7 @@ export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
 	ignorePath: '',
 	propertyName: 'Folders',
 	titleProp: '',
+	iconProp: 'vf_icon',
 	cmdShowTitle: false,
 	sortTreeBy: SortTypes.file_name,
 	sortTreeRev: false,
@@ -53,6 +55,7 @@ export class VirtFolderSettingTab extends PluginSettingTab
 		this.update_filter(this.plugin.settings.ignorePath);
 		this.update_prop_name(this.plugin.settings.propertyName);
 		this.update_title(this.plugin.settings.titleProp);
+		this.update_icon_prop(this.plugin.settings.iconProp);
 	}
 
 	display(): void
@@ -92,7 +95,7 @@ export class VirtFolderSettingTab extends PluginSettingTab
 
 		new Setting(containerEl)
 		.setName("YAML for note's title")
-		.setDesc("Leave the field blank to take the title from the file name")
+		.setDesc("Leave the field blank to take the title from the file name. Case-sensitive")
 		.addText((text: TextComponent) =>
 		{
 			text.setValue(this.plugin.settings.titleProp);
@@ -109,6 +112,32 @@ export class VirtFolderSettingTab extends PluginSettingTab
 					await this.plugin.saveSettings();
 
 					this.update_title(value);
+				}else{
+					style.borderColor = this.get_css_var('--background-modifier-error');
+				}
+			});
+		});
+
+
+		new Setting(containerEl)
+		.setName("YAML for note's icon")
+		.setDesc("The name can contain letters, numbers, minus sign, underscore and dots")
+		.addText((text: TextComponent) =>
+		{
+			text.setValue(this.plugin.settings.iconProp);
+			text.setPlaceholder('vf_icon')
+			text.onChange(async (value) =>
+			{
+				let style = text.inputEl.style;
+
+				if(this.is_valid_prop_name(value))
+				{
+					style.borderColor = '';
+
+					this.plugin.settings.iconProp = value;
+					await this.plugin.saveSettings();
+
+					this.update_icon_prop(value);
 				}else{
 					style.borderColor = this.get_css_var('--background-modifier-error');
 				}
@@ -285,9 +314,18 @@ export class VirtFolderSettingTab extends PluginSettingTab
 
 	update_title(value:string)
 	{
-		if (this.is_empty_str(value) || this.is_valid_prop_name(value))	
+		if (this.is_empty_str(value) || this.is_valid_prop_name(value))
 		{
 			this.plugin.base.settings.set_title(value);
+			this.update_note_list();
+		}
+	}
+
+	update_icon_prop(value:string)
+	{
+		if (this.is_valid_prop_name(value))
+		{
+			this.plugin.base.settings.set_icon_prop(value);
 			this.update_note_list();
 		}
 	}

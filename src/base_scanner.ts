@@ -12,6 +12,7 @@ class ScanSettings
 {
 	filter: string[] = [];
 	title: string = '';
+	icon_prop: string = 'vf_icon';
     prop_regexp?:RegExp = undefined;
 
     set_filter(filter: string[])
@@ -22,6 +23,11 @@ class ScanSettings
     set_title(title: string)
     {
         this.title = title;
+    }
+
+    set_icon_prop(prop: string)
+    {
+        this.icon_prop = prop;
     }
 
     set_prop(prop: string)
@@ -196,9 +202,9 @@ export class BaseScanner
                 this.note_list[file_id].is_pinned = (value != "0" && value != "false" && value != false);
             }
 
-            if("vf_icon" in metadata.frontmatter)
+            if(this.settings.icon_prop in metadata.frontmatter)
             {
-                let value = metadata.frontmatter["vf_icon"];
+                let value = metadata.frontmatter[this.settings.icon_prop];
                 if(_is_string(value)) this.note_list[file_id].icon = value;
             }
         }
@@ -648,8 +654,8 @@ export class BaseScanner
     {
         let metadata = this.app.metadataCache.getFileCache(file);
         if(!metadata || !metadata.frontmatter) return '';
-        if(!("vf_icon" in metadata.frontmatter)) return '';
-        let value = metadata.frontmatter["vf_icon"];
+        if(!(this.settings.icon_prop in metadata.frontmatter)) return '';
+        let value = metadata.frontmatter[this.settings.icon_prop];
         return _is_string(value) ? value : '';
     }
 

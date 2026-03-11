@@ -1183,6 +1183,7 @@ var DEFAULT_SETTINGS = {
   ignorePath: "",
   propertyName: "Folders",
   titleProp: "",
+  iconProp: "vf_icon",
   cmdShowTitle: false,
   sortTreeBy: "file_name" /* file_name */,
   sortTreeRev: false,
@@ -1201,6 +1202,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
     this.update_filter(this.plugin.settings.ignorePath);
     this.update_prop_name(this.plugin.settings.propertyName);
     this.update_title(this.plugin.settings.titleProp);
+    this.update_icon_prop(this.plugin.settings.iconProp);
   }
   display() {
     let { containerEl } = this;
@@ -1220,7 +1222,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       });
     });
-    new import_obsidian.Setting(containerEl).setName("YAML for note's title").setDesc("Leave the field blank to take the title from the file name").addText((text2) => {
+    new import_obsidian.Setting(containerEl).setName("YAML for note's title").setDesc("Leave the field blank to take the title from the file name. Case-sensitive").addText((text2) => {
       text2.setValue(this.plugin.settings.titleProp);
       text2.setPlaceholder("Title");
       text2.onChange(async (value) => {
@@ -1230,6 +1232,21 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
           this.plugin.settings.titleProp = value;
           await this.plugin.saveSettings();
           this.update_title(value);
+        } else {
+          style.borderColor = this.get_css_var("--background-modifier-error");
+        }
+      });
+    });
+    new import_obsidian.Setting(containerEl).setName("YAML for note's icon").setDesc("The name can contain letters, numbers, minus sign, underscore and dots").addText((text2) => {
+      text2.setValue(this.plugin.settings.iconProp);
+      text2.setPlaceholder("vf_icon");
+      text2.onChange(async (value) => {
+        let style = text2.inputEl.style;
+        if (this.is_valid_prop_name(value)) {
+          style.borderColor = "";
+          this.plugin.settings.iconProp = value;
+          await this.plugin.saveSettings();
+          this.update_icon_prop(value);
         } else {
           style.borderColor = this.get_css_var("--background-modifier-error");
         }
@@ -1334,6 +1351,12 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
       this.update_note_list();
     }
   }
+  update_icon_prop(value) {
+    if (this.is_valid_prop_name(value)) {
+      this.plugin.base.settings.set_icon_prop(value);
+      this.update_note_list();
+    }
+  }
   get_css_var(variable) {
     let el = document.querySelector("body");
     if (!el)
@@ -1353,6 +1376,7 @@ var ScanSettings = class {
   constructor() {
     this.filter = [];
     this.title = "";
+    this.icon_prop = "vf_icon";
     this.prop_regexp = void 0;
   }
   set_filter(filter) {
@@ -1360,6 +1384,9 @@ var ScanSettings = class {
   }
   set_title(title) {
     this.title = title;
+  }
+  set_icon_prop(prop) {
+    this.icon_prop = prop;
   }
   set_prop(prop) {
     let regexp_str = `^${prop}(\\.\\d+){0,1}$`;
@@ -1489,8 +1516,8 @@ var BaseScanner = class {
         let value = metadata.frontmatter["vf_pinned"];
         this.note_list[file_id].is_pinned = value != "0" && value != "false" && value != false;
       }
-      if ("vf_icon" in metadata.frontmatter) {
-        let value = metadata.frontmatter["vf_icon"];
+      if (this.settings.icon_prop in metadata.frontmatter) {
+        let value = metadata.frontmatter[this.settings.icon_prop];
         if (_is_string(value))
           this.note_list[file_id].icon = value;
       }
@@ -1832,9 +1859,9 @@ var BaseScanner = class {
     let metadata = this.app.metadataCache.getFileCache(file);
     if (!metadata || !metadata.frontmatter)
       return "";
-    if (!("vf_icon" in metadata.frontmatter))
+    if (!(this.settings.icon_prop in metadata.frontmatter))
       return "";
-    let value = metadata.frontmatter["vf_icon"];
+    let value = metadata.frontmatter[this.settings.icon_prop];
     return _is_string(value) ? value : "";
   }
   _arrays_equal(a, b) {
@@ -5946,10 +5973,10 @@ var YamlParser = class {
   set_icon(file, icon) {
     this.app.fileManager.processFrontMatter(file, (fm) => {
       if (icon) {
-        fm["vf_icon"] = icon;
+        fm[this.plugin.settings.iconProp] = icon;
         this.showMessage(`Icon set: ${icon}`);
       } else {
-        delete fm["vf_icon"];
+        delete fm[this.plugin.settings.iconProp];
         this.showMessage("Icon removed");
       }
     });
