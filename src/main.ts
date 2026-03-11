@@ -121,6 +121,42 @@ export default class VirtFolderPlugin extends Plugin
 			},
 		});
 
+		this.addCommand({
+			id: "navigate_parent",
+			name: "Navigate to parent folder",
+			icon: "arrow-up",
+			callback: () => {
+				this.VF_NavigateToParent();
+			},
+		});
+
+		this.addCommand({
+			id: "navigate_next",
+			name: "Navigate to next sibling",
+			icon: "arrow-down",
+			callback: () => {
+				this.VF_NavigateToSibling(1);
+			},
+		});
+
+		this.addCommand({
+			id: "navigate_prev",
+			name: "Navigate to previous sibling",
+			icon: "arrow-up",
+			callback: () => {
+				this.VF_NavigateToSibling(-1);
+			},
+		});
+
+		this.addCommand({
+			id: "navigate_child",
+			name: "Navigate to first child",
+			icon: "arrow-down",
+			callback: () => {
+				this.VF_NavigateToChild();
+			},
+		});
+
 		this.app.workspace.onLayoutReady(() =>
 		{
 			// reactive
@@ -323,6 +359,61 @@ export default class VirtFolderPlugin extends Plugin
 		let isPinned = note ? note.is_pinned : false;
 		this.yaml.toggle_pin(file, !isPinned);
 		this.update_data();
+	}
+
+	VF_NavigateToChild()
+	{
+		let file = this.app.workspace.getActiveFile();
+		if(!file) return;
+
+		let note = this.base.note_by_id(file.path);
+		if(!note || note.children.length === 0) return;
+
+		this.app.workspace.openLinkText(note.children[0], note.children[0], false);
+	}
+
+	VF_NavigateToParent()
+	{
+		let file = this.app.workspace.getActiveFile();
+		if(!file) return;
+
+		let note = this.base.note_by_id(file.path);
+		if(!note || note.parents.length === 0) return;
+
+		this.app.workspace.openLinkText(note.parents[0], note.parents[0], false);
+	}
+
+	VF_GetSiblingList(noteId: string): string[] | null
+	{
+		let note = this.base.note_by_id(noteId);
+		if(!note) return null;
+
+		if(note.parents.length > 0)
+		{
+			let parent = this.base.note_by_id(note.parents[0]);
+			if(!parent) return null;
+			return parent.children;
+		}
+
+		if(note.has_children())
+			return this.base.top_list;
+
+		return this.base.orphans_list;
+	}
+
+	VF_NavigateToSibling(direction: 1 | -1)
+	{
+		let file = this.app.workspace.getActiveFile();
+		if(!file) return;
+
+		let list = this.VF_GetSiblingList(file.path);
+		if(!list || list.length < 2) return;
+
+		let index = list.indexOf(file.path);
+		if(index === -1) return;
+
+		let next = (index + direction + list.length) % list.length;
+		this.app.workspace.openLinkText(list[next], list[next], false);
 	}
 
 	VF_SetIcon()
