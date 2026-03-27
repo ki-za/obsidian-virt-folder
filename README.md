@@ -5,10 +5,11 @@ Allows you to quickly find notes by navigating the knowledge base like a book ta
 
 ![virt_folder_example](./Images/virt_folder_example.png)
 
-## Overview
+## Articles
 
-- [Russian](https://habr.com/ru/articles/1000254/)
-- [English](https://habr.com/ru/articles/1000502/)
+- [How to organize a knowledge base in Obsidian using the Luhmann method](https://medium.com/@mr.grogrig/how-to-organize-a-knowledge-base-in-obsidian-using-the-luhmann-method-e6768c29b18f) (en)
+- [VirtFolder — Obsidian plugin overview](https://habr.com/ru/articles/1000502/) (en)
+- [VirtFolder — обзор плагина для Obsidian](https://habr.com/ru/articles/1000254/) (ru)
 
 ## Features
 
