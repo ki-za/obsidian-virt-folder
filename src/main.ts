@@ -545,14 +545,17 @@ export default class VirtFolderPlugin extends Plugin
 			return;
 		}
 
+		let folder = this.app.fileManager.getNewFileParent('');
+		let prefix = folder.path === '/' ? '' : folder.path + '/';
+
 		let name = 'Untitled';
 		let counter = 0;
-		let path = `${name}.md`;
+		let path = `${prefix}${name}.md`;
 
 		while(this.app.vault.getAbstractFileByPath(path))
 		{
 			counter++;
-			path = `${name} ${counter}.md`;
+			path = `${prefix}${name} ${counter}.md`;
 		}
 
 		let file = await this.app.vault.create(path, '');
