@@ -163,6 +163,14 @@ export default class VirtFolderPlugin extends Plugin
 			this.data.onStartApp();
 			this.update_data();
 
+			let activeFile = this.app.workspace.getActiveFile();
+			if(activeFile)
+			{
+				this.setActiveFile(activeFile);
+				let path = this.base.get_next_path(activeFile.path);
+				if(path) this.revealFile(path);
+			}
+
 			if(this.settings.firstRun)
 			{
 				this.settings.firstRun = false;
