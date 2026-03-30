@@ -533,6 +533,23 @@ export class BaseScanner
         {
             if (file.path.startsWith(filter)) return true;
         }
+
+        if (this.settings.ignored_tags.length > 0)
+        {
+            let cache = this.app.metadataCache.getFileCache(file);
+            if (cache)
+            {
+                let tags = getAllTags(cache);
+                if (tags)
+                {
+                    for (let tag of tags)
+                    {
+                        if (this.settings.ignored_tags.includes(tag)) return true;
+                    }
+                }
+            }
+        }
+
         return false;
     }
 
@@ -695,7 +712,21 @@ export class BaseScanner
     {
         let file_id = file.path;
         let note = this.note_by_id(file_id);
-        if(!note) return;
+
+        if(!note)
+        {
+            if(!this.is_filtered(file))
+            {
+                this.add_note(file);
+            }
+            return;
+        }
+
+        if(this.is_filtered(file))
+        {
+            this.remove_note(file_id);
+            return;
+        }
 
         let expected_parents = this._read_expected_parents(file);
         let expected_pinned = this._read_expected_pinned(file);
