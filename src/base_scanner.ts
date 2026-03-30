@@ -1,4 +1,4 @@
-import { App, TFile } from 'obsidian';
+import { App, TFile, getAllTags } from 'obsidian';
 import { OneNote } from 'onenote';
 import  VirtFolderPlugin  from 'main';
 import { SortTypes } from 'settings';
@@ -11,6 +11,7 @@ function _is_string(value:any)
 class ScanSettings
 {
 	filter: string[] = [];
+	ignored_tags: string[] = [];
 	title: string = '';
 	icon_prop: string = 'vf_icon';
     prop_regexp?:RegExp = undefined;
@@ -18,6 +19,11 @@ class ScanSettings
     set_filter(filter: string[])
     {
         this.filter = filter;
+    }
+
+    set_ignored_tags(tags: string[])
+    {
+        this.ignored_tags = tags;
     }
 
     set_title(title: string)
@@ -99,11 +105,27 @@ export class BaseScanner
 
     get_filtered_list()
     {
-        return this.app.vault.getMarkdownFiles().filter( (file) => 
+        return this.app.vault.getMarkdownFiles().filter( (file) =>
         {
             for (let filter of this.settings.filter)
             {
                 if (file.path.startsWith(filter)) return false;
+            }
+
+            if (this.settings.ignored_tags.length > 0)
+            {
+                let cache = this.app.metadataCache.getFileCache(file);
+                if (cache)
+                {
+                    let tags = getAllTags(cache);
+                    if (tags)
+                    {
+                        for (let tag of tags)
+                        {
+                            if (this.settings.ignored_tags.includes(tag)) return false;
+                        }
+                    }
+                }
             }
 
             return true;

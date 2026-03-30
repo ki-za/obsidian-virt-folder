@@ -12,6 +12,7 @@ export enum SortTypes
 export interface VirtFolderSettings
 {
 	ignorePath: string;
+	ignoreTags: string;
 	propertyName: string;
 	titleProp: string;
 	iconProp: string;
@@ -27,6 +28,7 @@ export interface VirtFolderSettings
 export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
 {
 	ignorePath: '',
+	ignoreTags: '',
 	propertyName: 'Folders',
 	titleProp: '',
 	iconProp: 'vf_icon',
@@ -53,6 +55,7 @@ export class VirtFolderSettingTab extends PluginSettingTab
 	init_settings()
 	{
 		this.update_filter(this.plugin.settings.ignorePath);
+		this.update_ignored_tags(this.plugin.settings.ignoreTags);
 		this.update_prop_name(this.plugin.settings.propertyName);
 		this.update_title(this.plugin.settings.titleProp);
 		this.update_icon_prop(this.plugin.settings.iconProp);
@@ -218,6 +221,29 @@ export class VirtFolderSettingTab extends PluginSettingTab
 
 
 		new Setting(containerEl)
+		.setName("List of ignored tags")
+		.setDesc("Notes with any of these tags will be hidden from the tree. One tag per line, # is optional")
+		.addTextArea((textArea: TextAreaComponent) =>
+		{
+			textArea
+				.setValue(this.plugin.settings.ignoreTags)
+				.setPlaceholder('fleeting\n#daily')
+				.onChange(async (value) =>
+				{
+					this.plugin.settings.ignoreTags = value;
+					await this.plugin.saveSettings();
+
+					this.update_ignored_tags(value);
+					this.update_counter();
+					this.update_note_list();
+				});
+
+			textArea.inputEl.setAttr("rows", 4);
+			textArea.inputEl.setAttr("cols", 40);
+		});
+
+
+		new Setting(containerEl)
 		.setName("Ignored files")
 		.addText((text: TextComponent) =>
 		{
@@ -287,6 +313,12 @@ export class VirtFolderSettingTab extends PluginSettingTab
 	{
 		let filter = this.parse_text_area(value);
 		this.plugin.base.settings.set_filter(filter);
+	}
+
+	update_ignored_tags(value:string)
+	{
+		let tags = this.parse_text_area(value).map(t => t.startsWith('#') ? t : '#' + t);
+		this.plugin.base.settings.set_ignored_tags(tags);
 	}
 
 	parse_text_area(value:string)

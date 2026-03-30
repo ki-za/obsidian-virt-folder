@@ -32,7 +32,7 @@ __export(main_exports, {
   default: () => VirtFolderPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian8 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 
 // node_modules/svelte/src/runtime/internal/utils.js
 function noop() {
@@ -1134,6 +1134,9 @@ var NoteData = class {
   }
 };
 
+// base_scanner.ts
+var import_obsidian2 = require("obsidian");
+
 // onenote.ts
 var OneNote = class {
   constructor(id, mtime, ctime, name, title) {
@@ -1181,6 +1184,7 @@ var SortTypes = /* @__PURE__ */ ((SortTypes2) => {
 })(SortTypes || {});
 var DEFAULT_SETTINGS = {
   ignorePath: "",
+  ignoreTags: "",
   propertyName: "Folders",
   titleProp: "",
   iconProp: "vf_icon",
@@ -1200,6 +1204,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
   }
   init_settings() {
     this.update_filter(this.plugin.settings.ignorePath);
+    this.update_ignored_tags(this.plugin.settings.ignoreTags);
     this.update_prop_name(this.plugin.settings.propertyName);
     this.update_title(this.plugin.settings.titleProp);
     this.update_icon_prop(this.plugin.settings.iconProp);
@@ -1289,6 +1294,17 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
       textArea.inputEl.setAttr("rows", 6);
       textArea.inputEl.setAttr("cols", 40);
     });
+    new import_obsidian.Setting(containerEl).setName("List of ignored tags").setDesc("Notes with any of these tags will be hidden from the tree. One tag per line, # is optional").addTextArea((textArea) => {
+      textArea.setValue(this.plugin.settings.ignoreTags).setPlaceholder("fleeting\n#daily").onChange(async (value) => {
+        this.plugin.settings.ignoreTags = value;
+        await this.plugin.saveSettings();
+        this.update_ignored_tags(value);
+        this.update_counter();
+        this.update_note_list();
+      });
+      textArea.inputEl.setAttr("rows", 4);
+      textArea.inputEl.setAttr("cols", 40);
+    });
     new import_obsidian.Setting(containerEl).setName("Ignored files").addText((text2) => {
       text2.setValue("0").setDisabled(true);
       this.counter = text2;
@@ -1328,6 +1344,10 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
   update_filter(value) {
     let filter = this.parse_text_area(value);
     this.plugin.base.settings.set_filter(filter);
+  }
+  update_ignored_tags(value) {
+    let tags = this.parse_text_area(value).map((t) => t.startsWith("#") ? t : "#" + t);
+    this.plugin.base.settings.set_ignored_tags(tags);
   }
   parse_text_area(value) {
     return value.split(/\r|\n/).map((n) => n.trim()).filter((n) => n);
@@ -1375,12 +1395,16 @@ function _is_string(value) {
 var ScanSettings = class {
   constructor() {
     this.filter = [];
+    this.ignored_tags = [];
     this.title = "";
     this.icon_prop = "vf_icon";
     this.prop_regexp = void 0;
   }
   set_filter(filter) {
     this.filter = filter;
+  }
+  set_ignored_tags(tags) {
+    this.ignored_tags = tags;
   }
   set_title(title) {
     this.title = title;
@@ -1440,6 +1464,18 @@ var BaseScanner = class {
       for (let filter of this.settings.filter) {
         if (file.path.startsWith(filter))
           return false;
+      }
+      if (this.settings.ignored_tags.length > 0) {
+        let cache = this.app.metadataCache.getFileCache(file);
+        if (cache) {
+          let tags = (0, import_obsidian2.getAllTags)(cache);
+          if (tags) {
+            for (let tag of tags) {
+              if (this.settings.ignored_tags.includes(tag))
+                return false;
+            }
+          }
+        }
       }
       return true;
     });
@@ -1901,8 +1937,8 @@ var BaseScanner = class {
 };
 
 // select_file_modal.ts
-var import_obsidian2 = require("obsidian");
-var VF_SelectFile = class extends import_obsidian2.FuzzySuggestModal {
+var import_obsidian3 = require("obsidian");
+var VF_SelectFile = class extends import_obsidian3.FuzzySuggestModal {
   constructor(plugin2, onSubmit, excludeIds) {
     super(plugin2.app);
     this.plugin = plugin2;
@@ -1961,7 +1997,7 @@ var VF_SelectFile = class extends import_obsidian2.FuzzySuggestModal {
 };
 
 // select_prop_modal.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 function get_link_base(link) {
   let regexp_1 = /(?:\[\[(.+?)\||\[\[(.+?)\]\]|\[.+?\]\((.+?)\))/;
   let result = null;
@@ -1976,7 +2012,7 @@ function get_link_base(link) {
   }
   return result;
 }
-var VF_SelectPropModal = class extends import_obsidian3.SuggestModal {
+var VF_SelectPropModal = class extends import_obsidian4.SuggestModal {
   constructor(plugin2, yamlProp, onSubmit) {
     super(plugin2.app);
     this.plugin = plugin2;
@@ -1989,7 +2025,7 @@ var VF_SelectPropModal = class extends import_obsidian3.SuggestModal {
   open() {
     this.plugin.yaml.get_links(this.yamlProp, (links) => {
       if (links.length == 0) {
-        new import_obsidian3.Notice(`${this.yamlProp} is empty`);
+        new import_obsidian4.Notice(`${this.yamlProp} is empty`);
         return;
       }
       if (links.length == 1) {
@@ -2036,7 +2072,7 @@ var VF_SelectPropModal = class extends import_obsidian3.SuggestModal {
 };
 
 // tree_view.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // node_modules/svelte/src/runtime/internal/disclose-version/index.js
 if (typeof window !== "undefined")
@@ -2106,10 +2142,10 @@ function slide(node, { delay = 0, duration = 400, easing = cubicOut, axis = "y" 
 }
 
 // components/Note.svelte
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // icon_picker_modal.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // emoji_names.ts
 var EMOJI_NAMES = {
@@ -4590,7 +4626,7 @@ function getAllItems() {
       items.push({ emoji: e, name: EMOJI_NAMES[e] || "" });
   return items;
 }
-var VF_IconPickerModal = class extends import_obsidian4.Modal {
+var VF_IconPickerModal = class extends import_obsidian5.Modal {
   constructor(plugin2, onSubmit) {
     super(plugin2.app);
     this.plugin = plugin2;
@@ -5321,7 +5357,7 @@ function instance($$self, $$props, $$invalidate) {
   let myElement;
   const children2 = {};
   const collapsedIcon = function(node) {
-    node.appendChild((0, import_obsidian5.getIcon)("right-triangle"));
+    node.appendChild((0, import_obsidian6.getIcon)("right-triangle"));
   };
   let expandTransitionWaiter = Promise.resolve();
   let expandTransitionEnd;
@@ -5391,7 +5427,7 @@ function instance($$self, $$props, $$invalidate) {
     let draggedId = dragData.id;
     let oldParentId = dragData.parentId;
     if (draggedId === id || node_path.includes(draggedId)) {
-      new import_obsidian5.Notice("Can't move a folder into itself");
+      new import_obsidian6.Notice("Can't move a folder into itself");
       return;
     }
     let newParentId = null;
@@ -5406,7 +5442,7 @@ function instance($$self, $$props, $$invalidate) {
     if (type !== "sub_note" && type !== "top_dir")
       return;
     event.preventDefault();
-    const menu = new import_obsidian5.Menu();
+    const menu = new import_obsidian6.Menu();
     let folderId = type === "top_dir" ? null : id;
     menu.addItem((item) => {
       item.setTitle("Create note").setIcon("plus").onClick(() => {
@@ -5824,7 +5860,7 @@ var Component_default = Component;
 // tree_view.ts
 var TREE_ICON = "folder-tree";
 var VIEW_TYPE_VF = "virt-folder-view";
-var VirtFolderView = class extends import_obsidian6.ItemView {
+var VirtFolderView = class extends import_obsidian7.ItemView {
   constructor(leaf, plugin2) {
     super(leaf);
     this.plugin = plugin2;
@@ -5851,14 +5887,14 @@ var VirtFolderView = class extends import_obsidian6.ItemView {
 };
 
 // yaml_parser.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 var YamlParser = class {
   constructor(app, plugin2) {
     this.app = app;
     this.plugin = plugin2;
   }
   showMessage(msg) {
-    new import_obsidian7.Notice(msg);
+    new import_obsidian8.Notice(msg);
   }
   _fm_add_link(front, selected, prop) {
     let file = this.app.vault.getFileByPath(selected);
@@ -6023,7 +6059,7 @@ var YamlParser = class {
 };
 
 // main.ts
-var VirtFolderPlugin = class extends import_obsidian8.Plugin {
+var VirtFolderPlugin = class extends import_obsidian9.Plugin {
   constructor() {
     super(...arguments);
     this.onOpenFile = (file) => {
@@ -6035,19 +6071,19 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
       }
     };
     this.onCreateFile = (file) => {
-      if (file instanceof import_obsidian8.TFile) {
+      if (file instanceof import_obsidian9.TFile) {
         this.data.onCreate(file);
         this.update_data();
       }
     };
     this.onDeleteFile = (file) => {
-      if (file instanceof import_obsidian8.TFile) {
+      if (file instanceof import_obsidian9.TFile) {
         this.data.onDelete(file);
         this.update_data();
       }
     };
     this.onRenameFile = (file, oldPath) => {
-      if (file instanceof import_obsidian8.TFile) {
+      if (file instanceof import_obsidian9.TFile) {
         this.data.onRename(file, oldPath);
         this.update_data();
       }
@@ -6119,7 +6155,7 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
           let view = leaves[0].view;
           if ((_a = view.tree) == null ? void 0 : _a.selectedDoms) {
             for (let dom of view.tree.selectedDoms.values()) {
-              if (dom.file instanceof import_obsidian8.TFile)
+              if (dom.file instanceof import_obsidian9.TFile)
                 files.push(dom.file);
             }
           }
@@ -6205,7 +6241,7 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
       this.registerEvent(this.app.vault.on("delete", this.onDeleteFile));
       this.registerEvent(this.app.vault.on("rename", this.onRenameFile));
       this.registerEvent(this.app.workspace.on("file-menu", (menu, file, source) => {
-        if (!(file instanceof import_obsidian8.TFile))
+        if (!(file instanceof import_obsidian9.TFile))
           return;
         menu.addItem((item) => {
           item.setTitle("Add to virtual folder").setIcon("folder-plus").onClick(() => {
@@ -6230,7 +6266,7 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
         });
       }));
       this.registerEvent(this.app.workspace.on("files-menu", (menu, files, source) => {
-        let tfiles = files.filter((f) => f instanceof import_obsidian8.TFile);
+        let tfiles = files.filter((f) => f instanceof import_obsidian9.TFile);
         if (tfiles.length === 0)
           return;
         menu.addItem((item) => {
@@ -6255,7 +6291,7 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
       active_id.set("");
   }
   setActiveFile(file) {
-    if (file instanceof import_obsidian8.TFile) {
+    if (file instanceof import_obsidian9.TFile) {
       active_id.set(file.path);
     } else {
       active_id.set("");
@@ -6443,7 +6479,7 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
         return;
       }
       let ref = this.app.vault.on("create", async (file2) => {
-        if (!(file2 instanceof import_obsidian8.TFile))
+        if (!(file2 instanceof import_obsidian9.TFile))
           return;
         this.app.vault.offref(ref);
         if (parentId)
@@ -6494,7 +6530,7 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
       return;
     let doDelete = async () => {
       await this.app.vault.trash(file, true);
-      new import_obsidian8.Notice("Note deleted");
+      new import_obsidian9.Notice("Note deleted");
       this.update_data();
     };
     if (this.settings.confirmDelete) {
@@ -6525,7 +6561,7 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
         if (f)
           await this.app.vault.trash(f, true);
       }
-      new import_obsidian8.Notice(`${allIds.length} note(s) deleted`);
+      new import_obsidian9.Notice(`${allIds.length} note(s) deleted`);
       this.update_data();
     };
     new VF_ConfirmModal(this.app, doDelete, title, message).open();
@@ -6543,7 +6579,7 @@ var VirtFolderPlugin = class extends import_obsidian8.Plugin {
     this.update_data();
   }
 };
-var VF_ConfirmModal = class extends import_obsidian8.Modal {
+var VF_ConfirmModal = class extends import_obsidian9.Modal {
   constructor(app, onConfirm, title = "Delete note", message = "") {
     super(app);
     this.onConfirm = onConfirm;
@@ -6553,7 +6589,7 @@ var VF_ConfirmModal = class extends import_obsidian8.Modal {
   onOpen() {
     this.titleEl.setText(this.title);
     this.contentEl.createEl("p", { text: this.message });
-    new import_obsidian8.Setting(this.contentEl).addButton((btn) => {
+    new import_obsidian9.Setting(this.contentEl).addButton((btn) => {
       btn.setButtonText("Delete").setWarning().onClick(() => {
         this.close();
         this.onConfirm();
