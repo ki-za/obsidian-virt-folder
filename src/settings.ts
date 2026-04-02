@@ -479,7 +479,7 @@ export class VirtFolderSettingTab extends PluginSettingTab
 			this.app,
 			'Tag name:',
 			'e.g., #work, #urgent',
-			async (value) => {
+			(value) => {
 				if (!value) return;
 				let tag = value.startsWith('#') ? value : '#' + value;
 				if (!/^#[a-zA-Z0-9._-]+$/.test(tag)) return;
@@ -489,7 +489,7 @@ export class VirtFolderSettingTab extends PluginSettingTab
 					color: '#ff6b6b',
 					opacity: 0.3
 				});
-				await this.plugin.saveSettings();
+				this.plugin.saveSettings();
 				this.display();
 				this.update_note_list();
 			}

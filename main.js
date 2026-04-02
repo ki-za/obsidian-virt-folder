@@ -1203,7 +1203,16 @@ var InputPromptModal = class extends import_obsidian.Modal {
     const { contentEl, titleEl } = this;
     titleEl.setText(this.title);
     const input = new import_obsidian.TextComponent(contentEl).setPlaceholder(this.placeholder).setValue("");
+    this.inputEl = input.inputEl;
     input.inputEl.select();
+    this.keydownHandler = (e) => {
+      if (e.key === "Enter" && !this.submitted) {
+        this.submitted = true;
+        this.onSubmit(input.getValue());
+        this.close();
+      }
+    };
+    this.inputEl.addEventListener("keydown", this.keydownHandler);
     new import_obsidian.Setting(contentEl).addButton(
       (btn) => btn.setButtonText("Add").onClick(() => {
         if (this.submitted)
@@ -1217,16 +1226,12 @@ var InputPromptModal = class extends import_obsidian.Modal {
         this.close();
       })
     );
-    input.inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !this.submitted) {
-        this.submitted = true;
-        this.onSubmit(input.getValue());
-        this.close();
-      }
-    });
   }
   onClose() {
     this.submitted = false;
+    if (this.inputEl) {
+      this.inputEl.removeEventListener("keydown", this.keydownHandler);
+    }
   }
 };
 
@@ -1497,7 +1502,7 @@ var VirtFolderSettingTab = class extends import_obsidian2.PluginSettingTab {
       this.app,
       "Tag name:",
       "e.g., #work, #urgent",
-      async (value) => {
+      (value) => {
         if (!value)
           return;
         let tag = value.startsWith("#") ? value : "#" + value;
@@ -1508,7 +1513,7 @@ var VirtFolderSettingTab = class extends import_obsidian2.PluginSettingTab {
           color: "#ff6b6b",
           opacity: 0.3
         });
-        await this.plugin.saveSettings();
+        this.plugin.saveSettings();
         this.display();
         this.update_note_list();
       }
