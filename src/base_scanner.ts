@@ -1,7 +1,7 @@
 import { App, TFile, getAllTags } from 'obsidian';
 import { OneNote } from 'onenote';
 import  VirtFolderPlugin  from 'main';
-import { SortTypes, TagHighlightConfig, HighlightProp } from 'settings';
+import { SortTypes, TagHighlightConfig, HighlightProp, SrSettings } from 'settings';
 
 function _is_string(value:any)
 {
@@ -15,6 +15,11 @@ class ScanSettings
 	title: string = '';
 	icon_prop: string = 'vf_icon';
     prop_regexp?:RegExp = undefined;
+	sr_settings: SrSettings = {
+		enableSrGradient: false,
+		maxOpacityReduction: 14,
+		minimumInterval: 0,
+	};
 
     set_filter(filter: string[])
     {
@@ -42,6 +47,11 @@ class ScanSettings
 		this.prop_regexp = new RegExp(regexp_str);
     }
 
+    set_sr_settings(settings: SrSettings)
+    {
+        this.sr_settings = settings;
+    }
+
     is_valid()
     {
         return typeof this.prop_regexp !== 'undefined';
@@ -55,11 +65,50 @@ export class BaseScanner
     orphans_list: string[] = [];
     last_active: string[] = ["1"];
     settings: ScanSettings = new ScanSettings();
+	sr_cache: Map<string, {interval: number; ease: number}> = new Map();
 
     constructor(private app: App, private plugin: VirtFolderPlugin)
     {
 
     }
+
+	load_sr_cache(): void
+	{
+		const files = this.app.vault.getMarkdownFiles();
+		for (const file of files)
+		{
+			const cache = this.app.metadataCache.getFileCache(file);
+			if (cache?.frontmatter)
+			{
+				const interval = parseFloat(cache.frontmatter['sr-interval']);
+				const ease = parseFloat(cache.frontmatter['sr-ease']);
+				if (!isNaN(interval))
+				{
+					this.sr_cache.set(file.path, { interval, ease: isNaN(ease) ? 0 : ease });
+				}
+			}
+		}
+	}
+
+	update_sr_cache(file: TFile, data: string, cache: any): void
+	{
+		if (cache?.frontmatter)
+		{
+			const interval = parseFloat(cache.frontmatter['sr-interval']);
+			const ease = parseFloat(cache.frontmatter['sr-ease']);
+			if (!isNaN(interval))
+			{
+				this.sr_cache.set(file.path, { interval, ease: isNaN(ease) ? 0 : ease });
+				return;
+			}
+		}
+		this.sr_cache.delete(file.path);
+	}
+
+	get_sr_values(file: TFile): {interval: number; ease: number} | undefined
+	{
+		return this.sr_cache.get(file.path);
+	}
 
     test_prop_name(prop_name:string)
     {
@@ -92,6 +141,7 @@ export class BaseScanner
 
         let old_list = this.note_list;
         this.init_note_list();
+        this.load_sr_cache();
         this.build_links();
         this.build_top();
         this.sort_links();

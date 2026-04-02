@@ -13,6 +13,8 @@
 	import { VF_IconPickerModal } from "../icon_picker_modal";
 	import type { Action } from "svelte/action";
 	import { tick } from "svelte";
+	import type { TFile } from "obsidian";
+	import { SrSettings } from "../settings";
 	
     
     let plugin = getPlugin();
@@ -30,6 +32,15 @@
 	let childList: any[] = [];
 	let myElement: HTMLDivElement;
 	const children: Record<string, any> = {};
+
+	function getSrOpacityModifier(srValues: {interval: number; ease: number} | undefined, settings: SrSettings): number
+	{
+		if (!settings.enableSrGradient) return 0;
+		if (!srValues || srValues.interval <= 0) return 0;
+		if (srValues.interval < settings.minimumInterval) return 0;
+		const max = settings.maxOpacityReduction / 100;
+		return Math.min(max, max * Math.log(srValues.interval) / Math.log(7));
+	}
 
 	$:
 	{
@@ -70,8 +81,12 @@
 		}
 	}
 
+	$: srValues = type === "sub_note" ? $data.get_sr_values(plugin.app.vault.getFileByPath(id) as TFile) : undefined;
+	$: srSettings = plugin.settings.srSettings;
+	$: srModifier = getSrOpacityModifier(srValues, srSettings);
+
 	$: tagHighlightBackground = (!IsOpened && noteColor && noteOpacity > 0)
-		? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100}%, transparent)`
+		? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100 * (1 - srModifier)}%, transparent)`
 		: '';
 
 	$: tagHighlightStyle = '';

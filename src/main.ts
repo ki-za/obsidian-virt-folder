@@ -301,8 +301,9 @@ export default class VirtFolderPlugin extends Plugin
 		}
 	};
 	  
-	onResolveMetadata = (file: TFile) =>
+	onResolveMetadata = (file: TFile, data: string, cache: any) =>
 	{
+		this.base.update_sr_cache(file, data, cache);
 		this.data.onChange(file);
 		this.update_data();
 	};

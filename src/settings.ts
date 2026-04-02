@@ -31,6 +31,13 @@ export interface HighlightProp
 	opacity: number;
 }
 
+export interface SrSettings
+{
+	enableSrGradient: boolean;
+	maxOpacityReduction: number;
+	minimumInterval: number;
+}
+
 export interface VirtFolderSettings
 {
 	ignorePath: string;
@@ -47,6 +54,7 @@ export interface VirtFolderSettings
 	firstRun: boolean;
 	tagHighlights: TagHighlightConfig[];
 	highlightProps: HighlightProp[];
+	srSettings: SrSettings;
 }
 
 export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
@@ -65,6 +73,11 @@ export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
 	firstRun: true,
 	tagHighlights: [],
 	highlightProps: [{ prop: "tags", color: "#ff6b6b", opacity: 0.3 }],
+	srSettings: {
+		enableSrGradient: false,
+		maxOpacityReduction: 14,
+		minimumInterval: 0,
+	},
 };
 
 export class VirtFolderSettingTab extends PluginSettingTab
@@ -366,6 +379,52 @@ export class VirtFolderSettingTab extends PluginSettingTab
 						});
 				});
 		});
+
+		new Setting(containerEl)
+			.setName('Spaced Repetition Integration')
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName('Enable SR gradient')
+			.setDesc('Apply opacity gradient based on SR intervals to highlighted notes')
+			.addToggle( (tg:ToggleComponent) =>
+			{
+				tg.setValue(this.plugin.settings.srSettings.enableSrGradient);
+				tg.onChange(async (value) =>
+				{
+					this.plugin.settings.srSettings.enableSrGradient = value;
+					await this.plugin.saveSettings();
+					this.update_note_list();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Max opacity reduction')
+			.setDesc('Maximum percentage to reduce opacity at furthest interval (14 days)')
+			.addSlider(slider => {
+				slider.setValue(this.plugin.settings.srSettings.maxOpacityReduction)
+					.setLimits(0, 50, 1)
+					.setDynamicTooltip();
+				slider.onChange(async (value) => {
+					this.plugin.settings.srSettings.maxOpacityReduction = value;
+					await this.plugin.saveSettings();
+					this.update_note_list();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Minimum interval')
+			.setDesc('Only apply gradient to notes with SR interval >= this many days')
+			.addSlider(slider => {
+				slider.setValue(this.plugin.settings.srSettings.minimumInterval)
+					.setLimits(0, 30, 1)
+					.setDynamicTooltip();
+				slider.onChange(async (value) => {
+					this.plugin.settings.srSettings.minimumInterval = value;
+					await this.plugin.saveSettings();
+					this.update_note_list();
+				});
+			});
 
 	}
 

@@ -1257,7 +1257,12 @@ var DEFAULT_SETTINGS = {
   autoReveal: false,
   firstRun: true,
   tagHighlights: [],
-  highlightProps: [{ prop: "tags", color: "#ff6b6b", opacity: 0.3 }]
+  highlightProps: [{ prop: "tags", color: "#ff6b6b", opacity: 0.3 }],
+  srSettings: {
+    enableSrGradient: false,
+    maxOpacityReduction: 14,
+    minimumInterval: 0
+  }
 };
 var VirtFolderSettingTab = class extends import_obsidian2.PluginSettingTab {
   constructor(app, plugin2) {
@@ -1424,6 +1429,31 @@ var VirtFolderSettingTab = class extends import_obsidian2.PluginSettingTab {
         });
       });
     });
+    new import_obsidian2.Setting(containerEl).setName("Spaced Repetition Integration").setHeading();
+    new import_obsidian2.Setting(containerEl).setName("Enable SR gradient").setDesc("Apply opacity gradient based on SR intervals to highlighted notes").addToggle((tg) => {
+      tg.setValue(this.plugin.settings.srSettings.enableSrGradient);
+      tg.onChange(async (value) => {
+        this.plugin.settings.srSettings.enableSrGradient = value;
+        await this.plugin.saveSettings();
+        this.update_note_list();
+      });
+    });
+    new import_obsidian2.Setting(containerEl).setName("Max opacity reduction").setDesc("Maximum percentage to reduce opacity at furthest interval (14 days)").addSlider((slider) => {
+      slider.setValue(this.plugin.settings.srSettings.maxOpacityReduction).setLimits(0, 50, 1).setDynamicTooltip();
+      slider.onChange(async (value) => {
+        this.plugin.settings.srSettings.maxOpacityReduction = value;
+        await this.plugin.saveSettings();
+        this.update_note_list();
+      });
+    });
+    new import_obsidian2.Setting(containerEl).setName("Minimum interval").setDesc("Only apply gradient to notes with SR interval >= this many days").addSlider((slider) => {
+      slider.setValue(this.plugin.settings.srSettings.minimumInterval).setLimits(0, 30, 1).setDynamicTooltip();
+      slider.onChange(async (value) => {
+        this.plugin.settings.srSettings.minimumInterval = value;
+        await this.plugin.saveSettings();
+        this.update_note_list();
+      });
+    });
   }
   update_counter() {
     let count = this.plugin.base.get_filtered_count();
@@ -1532,6 +1562,11 @@ var ScanSettings = class {
     this.title = "";
     this.icon_prop = "vf_icon";
     this.prop_regexp = void 0;
+    this.sr_settings = {
+      enableSrGradient: false,
+      maxOpacityReduction: 14,
+      minimumInterval: 0
+    };
   }
   set_filter(filter) {
     this.filter = filter;
@@ -1549,6 +1584,9 @@ var ScanSettings = class {
     let regexp_str = `^${prop}(\\.\\d+){0,1}$`;
     this.prop_regexp = new RegExp(regexp_str);
   }
+  set_sr_settings(settings) {
+    this.sr_settings = settings;
+  }
   is_valid() {
     return typeof this.prop_regexp !== "undefined";
   }
@@ -1562,6 +1600,34 @@ var BaseScanner = class {
     this.orphans_list = [];
     this.last_active = ["1"];
     this.settings = new ScanSettings();
+    this.sr_cache = /* @__PURE__ */ new Map();
+  }
+  load_sr_cache() {
+    const files = this.app.vault.getMarkdownFiles();
+    for (const file of files) {
+      const cache = this.app.metadataCache.getFileCache(file);
+      if (cache == null ? void 0 : cache.frontmatter) {
+        const interval = parseFloat(cache.frontmatter["sr-interval"]);
+        const ease = parseFloat(cache.frontmatter["sr-ease"]);
+        if (!isNaN(interval)) {
+          this.sr_cache.set(file.path, { interval, ease: isNaN(ease) ? 0 : ease });
+        }
+      }
+    }
+  }
+  update_sr_cache(file, data2, cache) {
+    if (cache == null ? void 0 : cache.frontmatter) {
+      const interval = parseFloat(cache.frontmatter["sr-interval"]);
+      const ease = parseFloat(cache.frontmatter["sr-ease"]);
+      if (!isNaN(interval)) {
+        this.sr_cache.set(file.path, { interval, ease: isNaN(ease) ? 0 : ease });
+        return;
+      }
+    }
+    this.sr_cache.delete(file.path);
+  }
+  get_sr_values(file) {
+    return this.sr_cache.get(file.path);
   }
   test_prop_name(prop_name) {
     if (!this.settings.prop_regexp)
@@ -1584,6 +1650,7 @@ var BaseScanner = class {
       return;
     let old_list = this.note_list;
     this.init_note_list();
+    this.load_sr_cache();
     this.build_links();
     this.build_top();
     this.sort_links();
@@ -4932,9 +4999,9 @@ var VF_IconPickerModal = class extends import_obsidian6.Modal {
 // components/Note.svelte
 function get_each_context(ctx, list, i) {
   const child_ctx = ctx.slice();
-  child_ctx[40] = list[i];
-  child_ctx[41] = list;
-  child_ctx[42] = i;
+  child_ctx[44] = list[i];
+  child_ctx[45] = list;
+  child_ctx[46] = i;
   return child_ctx;
 }
 function create_if_block_4(ctx) {
@@ -4959,7 +5026,7 @@ function create_if_block_4(ctx) {
         dispose = [
           listen(div, "click", stop_propagation(
             /*click_handler*/
-            ctx[31]
+            ctx[34]
           )),
           action_destroyer(collapsedIcon_action = /*collapsedIcon*/
           ctx[17].call(null, div))
@@ -5083,7 +5150,7 @@ function create_if_block(ctx) {
   );
   const get_key = (ctx2) => (
     /*child*/
-    ctx2[40]
+    ctx2[44]
   );
   for (let i = 0; i < each_value.length; i += 1) {
     let child_ctx = get_each_context(ctx, each_value, i);
@@ -5118,7 +5185,7 @@ function create_if_block(ctx) {
             div,
             "introend",
             /*introend_handler*/
-            ctx[34]
+            ctx[37]
           )
         ];
         mounted = true;
@@ -5183,27 +5250,27 @@ function create_each_block(key_1, ctx) {
   let note_1;
   let child = (
     /*child*/
-    ctx[40]
+    ctx[44]
   );
   let current;
   const assign_note_1 = () => (
     /*note_1_binding*/
-    ctx[33](note_1, child)
+    ctx[36](note_1, child)
   );
   const unassign_note_1 = () => (
     /*note_1_binding*/
-    ctx[33](null, child)
+    ctx[36](null, child)
   );
   let note_1_props = {
     id: (
       /*child*/
-      ctx[40]
+      ctx[44]
     ),
     node_path: (
       /*build_path*/
       ctx[19](
         /*child*/
-        ctx[40]
+        ctx[44]
       )
     )
   };
@@ -5225,23 +5292,23 @@ function create_each_block(key_1, ctx) {
     p(new_ctx, dirty) {
       ctx = new_ctx;
       if (child !== /*child*/
-      ctx[40]) {
+      ctx[44]) {
         unassign_note_1();
         child = /*child*/
-        ctx[40];
+        ctx[44];
         assign_note_1();
       }
       const note_1_changes = {};
       if (dirty[0] & /*childList*/
       1024)
         note_1_changes.id = /*child*/
-        ctx[40];
+        ctx[44];
       if (dirty[0] & /*childList*/
       1024)
         note_1_changes.node_path = /*build_path*/
         ctx[19](
           /*child*/
-          ctx[40]
+          ctx[44]
         );
       note_1.$set(note_1_changes);
     },
@@ -5373,7 +5440,7 @@ function create_fragment(ctx) {
       append(div2, t5);
       if (if_block4)
         if_block4.m(div2, null);
-      ctx[35](div2);
+      ctx[38](div2);
       current = true;
       if (!mounted) {
         dispose = [
@@ -5409,7 +5476,7 @@ function create_fragment(ctx) {
             div1,
             "click",
             /*click_handler_1*/
-            ctx[32]
+            ctx[35]
           )
         ];
         mounted = true;
@@ -5577,19 +5644,22 @@ function create_fragment(ctx) {
         if_block3.d();
       if (if_block4)
         if_block4.d();
-      ctx[35](null);
+      ctx[38](null);
       mounted = false;
       run_all(dispose);
     }
   };
 }
 function instance($$self, $$props, $$invalidate) {
+  let srValues;
+  let srSettings;
+  let srModifier;
   let tagHighlightBackground;
   let tagHighlightStyle;
   let $data;
   let $active_id;
-  component_subscribe($$self, data, ($$value) => $$invalidate(29, $data = $$value));
-  component_subscribe($$self, active_id, ($$value) => $$invalidate(30, $active_id = $$value));
+  component_subscribe($$self, data, ($$value) => $$invalidate(32, $data = $$value));
+  component_subscribe($$self, active_id, ($$value) => $$invalidate(33, $active_id = $$value));
   let { id = "unknown-link-id" } = $$props;
   let { type = "sub_note" } = $$props;
   let { node_path = [] } = $$props;
@@ -5606,6 +5676,16 @@ function instance($$self, $$props, $$invalidate) {
   let childList = [];
   let myElement;
   const children2 = {};
+  function getSrOpacityModifier(srValues2, settings) {
+    if (!settings.enableSrGradient)
+      return 0;
+    if (!srValues2 || srValues2.interval <= 0)
+      return 0;
+    if (srValues2.interval < settings.minimumInterval)
+      return 0;
+    const max = settings.maxOpacityReduction / 100;
+    return Math.min(max, max * Math.log(srValues2.interval) / Math.log(7));
+  }
   const collapsedIcon = function(node) {
     node.appendChild((0, import_obsidian7.getIcon)("right-triangle"));
   };
@@ -5805,8 +5885,9 @@ function instance($$self, $$props, $$invalidate) {
       $$invalidate(26, node_path = $$props2.node_path);
   };
   $$self.$$.update = () => {
-    if ($$self.$$.dirty[0] & /*id, $active_id, type, $data, note*/
-    1879048195) {
+    if ($$self.$$.dirty[0] & /*id, type, note*/
+    268435459 | $$self.$$.dirty[1] & /*$active_id, $data*/
+    6) {
       $: {
         $$invalidate(2, IsOpened = id == $active_id);
         if (type == "top_dir") {
@@ -5837,12 +5918,26 @@ function instance($$self, $$props, $$invalidate) {
         }
       }
     }
-    if ($$self.$$.dirty[0] & /*IsOpened, noteColor, noteOpacity*/
-    28) {
+    if ($$self.$$.dirty[0] & /*type, id*/
+    3 | $$self.$$.dirty[1] & /*$data*/
+    2) {
       $:
-        $$invalidate(16, tagHighlightBackground = !IsOpened && noteColor && noteOpacity > 0 ? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100}%, transparent)` : "");
+        $$invalidate(31, srValues = type === "sub_note" ? $data.get_sr_values(plugin2.app.vault.getFileByPath(id)) : void 0);
+    }
+    if ($$self.$$.dirty[0] & /*srSettings*/
+    1073741824 | $$self.$$.dirty[1] & /*srValues*/
+    1) {
+      $:
+        $$invalidate(29, srModifier = getSrOpacityModifier(srValues, srSettings));
+    }
+    if ($$self.$$.dirty[0] & /*IsOpened, noteColor, noteOpacity, srModifier*/
+    536870940) {
+      $:
+        $$invalidate(16, tagHighlightBackground = !IsOpened && noteColor && noteOpacity > 0 ? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100 * (1 - srModifier)}%, transparent)` : "");
     }
   };
+  $:
+    $$invalidate(30, srSettings = plugin2.settings.srSettings);
   $:
     $$invalidate(15, tagHighlightStyle = "");
   return [
@@ -5875,6 +5970,9 @@ function instance($$self, $$props, $$invalidate) {
     node_path,
     focusNotes,
     note,
+    srModifier,
+    srSettings,
+    srValues,
     $data,
     $active_id,
     click_handler,
@@ -6359,7 +6457,8 @@ var VirtFolderPlugin = class extends import_obsidian10.Plugin {
         this.update_data();
       }
     };
-    this.onResolveMetadata = (file) => {
+    this.onResolveMetadata = (file, data2, cache) => {
+      this.base.update_sr_cache(file, data2, cache);
       this.data.onChange(file);
       this.update_data();
     };
