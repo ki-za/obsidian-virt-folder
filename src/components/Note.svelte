@@ -74,9 +74,7 @@
 		? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100}%, transparent)`
 		: '';
 
-	$: tagHighlightStyle = (!IsOpened && noteColor && noteOpacity > 0)
-		? 'border-radius: 4px; margin: 3px 0px 0px 0px; padding: 4px 8px 2px 8px;'
-		: '';
+	$: tagHighlightStyle = '';
 
 	const collapsedIcon: Action = function (node) {
 	    node.appendChild(getIcon("right-triangle")!);
@@ -308,6 +306,7 @@
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
 	<div
 		class="tree-item-self is-clickable mod-collapsible {IsOpened ? 'vf-current-note' : ''}"
+		class:vf-tag-highlight={!IsOpened && noteColor && noteOpacity > 0}
 		class:vf-drop-target={isDragOver}
 		draggable={type === 'sub_note'}
 		style:background-color={tagHighlightBackground}
