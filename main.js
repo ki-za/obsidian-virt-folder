@@ -1204,15 +1204,19 @@ var InputPromptModal = class extends import_obsidian.Modal {
     titleEl.setText(this.title);
     const input = new import_obsidian.TextComponent(contentEl).setPlaceholder(this.placeholder).setValue("");
     input.inputEl.select();
-    new import_obsidian.Setting(contentEl).addButton((btn) => btn.setButtonText("Add").onClick(() => {
-      if (this.submitted)
-        return;
-      this.submitted = true;
-      this.onSubmit(input.getValue());
-      this.close();
-    })).addButton((btn) => btn.setButtonText("Cancel").onClick(() => {
-      this.close();
-    }));
+    new import_obsidian.Setting(contentEl).addButton(
+      (btn) => btn.setButtonText("Add").onClick(() => {
+        if (this.submitted)
+          return;
+        this.submitted = true;
+        this.onSubmit(input.getValue());
+        this.close();
+      })
+    ).addButton(
+      (btn) => btn.setButtonText("Cancel").onClick(() => {
+        this.close();
+      })
+    );
     input.inputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !this.submitted) {
         this.submitted = true;
@@ -1220,6 +1224,9 @@ var InputPromptModal = class extends import_obsidian.Modal {
         this.close();
       }
     });
+  }
+  onClose() {
+    this.submitted = false;
   }
 };
 
@@ -4938,7 +4945,7 @@ function create_if_block_4(ctx) {
         div,
         "is-collapsed",
         /*isCollapsed*/
-        ctx[6]
+        ctx[8]
       );
     },
     m(target, anchor) {
@@ -4950,19 +4957,19 @@ function create_if_block_4(ctx) {
             ctx[31]
           )),
           action_destroyer(collapsedIcon_action = /*collapsedIcon*/
-          ctx[15].call(null, div))
+          ctx[17].call(null, div))
         ];
         mounted = true;
       }
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*isCollapsed*/
-      64) {
+      256) {
         toggle_class(
           div,
           "is-collapsed",
           /*isCollapsed*/
-          ctx2[6]
+          ctx2[8]
         );
       }
     },
@@ -4983,7 +4990,7 @@ function create_if_block_3(ctx) {
       span = element("span");
       t = text(
         /*noteIcon*/
-        ctx[4]
+        ctx[6]
       );
       attr(span, "class", "vf-note-icon");
     },
@@ -4993,11 +5000,11 @@ function create_if_block_3(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*noteIcon*/
-      16)
+      64)
         set_data(
           t,
           /*noteIcon*/
-          ctx2[4]
+          ctx2[6]
         );
     },
     d(detaching) {
@@ -5033,7 +5040,7 @@ function create_if_block_1(ctx) {
       span = element("span");
       t = text(
         /*childCounter*/
-        ctx[7]
+        ctx[9]
       );
       attr(span, "class", "vf-counter");
     },
@@ -5043,11 +5050,11 @@ function create_if_block_1(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*childCounter*/
-      128)
+      512)
         set_data(
           t,
           /*childCounter*/
-          ctx2[7]
+          ctx2[9]
         );
     },
     d(detaching) {
@@ -5067,7 +5074,7 @@ function create_if_block(ctx) {
   let dispose;
   let each_value = ensure_array_like(
     /*childList*/
-    ctx[8]
+    ctx[10]
   );
   const get_key = (ctx2) => (
     /*child*/
@@ -5100,7 +5107,7 @@ function create_if_block(ctx) {
             div,
             "introstart",
             /*expandTransitionStart*/
-            ctx[16]
+            ctx[18]
           ),
           listen(
             div,
@@ -5114,10 +5121,10 @@ function create_if_block(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*childList, build_path, children*/
-      132352) {
+      529408) {
         each_value = ensure_array_like(
           /*childList*/
-          ctx2[8]
+          ctx2[10]
         );
         group_outros();
         each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx2, each_value, each_1_lookup, div, outro_and_destroy_block, create_each_block, null, get_each_context);
@@ -5189,7 +5196,7 @@ function create_each_block(key_1, ctx) {
     ),
     node_path: (
       /*build_path*/
-      ctx[17](
+      ctx[19](
         /*child*/
         ctx[40]
       )
@@ -5221,13 +5228,13 @@ function create_each_block(key_1, ctx) {
       }
       const note_1_changes = {};
       if (dirty[0] & /*childList*/
-      256)
+      1024)
         note_1_changes.id = /*child*/
         ctx[40];
       if (dirty[0] & /*childList*/
-      256)
+      1024)
         note_1_changes.node_path = /*build_path*/
-        ctx[17](
+        ctx[19](
           /*child*/
           ctx[40]
         );
@@ -5269,24 +5276,24 @@ function create_fragment(ctx) {
   let dispose;
   let if_block0 = (
     /*childCounter*/
-    ctx[7] > 0 && create_if_block_4(ctx)
+    ctx[9] > 0 && create_if_block_4(ctx)
   );
   let if_block1 = (
     /*noteIcon*/
-    ctx[4] && create_if_block_3(ctx)
+    ctx[6] && create_if_block_3(ctx)
   );
   let if_block2 = (
     /*isPinned*/
-    ctx[5] && create_if_block_2(ctx)
+    ctx[7] && create_if_block_2(ctx)
   );
   let if_block3 = (
     /*childCounter*/
-    ctx[7] > 0 && create_if_block_1(ctx)
+    ctx[9] > 0 && create_if_block_1(ctx)
   );
   let if_block4 = (
     /*childCounter*/
-    ctx[7] > 0 && !/*isCollapsed*/
-    ctx[6] && create_if_block(ctx)
+    ctx[9] > 0 && !/*isCollapsed*/
+    ctx[8] && create_if_block(ctx)
   );
   return {
     c() {
@@ -5301,7 +5308,7 @@ function create_fragment(ctx) {
       t1 = space();
       t2 = text(
         /*title*/
-        ctx[3]
+        ctx[5]
       );
       t3 = space();
       if (if_block2)
@@ -5321,19 +5328,23 @@ function create_fragment(ctx) {
         div1,
         "style",
         /*tagHighlightStyle*/
-        ctx[13]
+        ctx[15]
       );
+      toggle_class(div1, "vf-tag-highlight", !/*IsOpened*/
+      ctx[2] && /*noteColor*/
+      ctx[3] && /*noteOpacity*/
+      ctx[4] > 0);
       toggle_class(
         div1,
         "vf-drop-target",
         /*isDragOver*/
-        ctx[12]
+        ctx[14]
       );
       set_style(
         div1,
         "background-color",
         /*tagHighlightBackground*/
-        ctx[14]
+        ctx[16]
       );
       attr(div2, "class", "tree-item is-clickable");
     },
@@ -5365,29 +5376,29 @@ function create_fragment(ctx) {
             div1,
             "dragstart",
             /*handleDragStart*/
-            ctx[19]
+            ctx[21]
           ),
           listen(div1, "dragover", prevent_default(
             /*handleDragOver*/
-            ctx[20]
+            ctx[22]
           )),
           listen(
             div1,
             "dragleave",
             /*handleDragLeave*/
-            ctx[21]
+            ctx[23]
           ),
           listen(
             div1,
             "drop",
             /*handleDrop*/
-            ctx[22]
+            ctx[24]
           ),
           listen(
             div1,
             "contextmenu",
             /*handleContextMenu*/
-            ctx[23]
+            ctx[25]
           ),
           listen(
             div1,
@@ -5402,7 +5413,7 @@ function create_fragment(ctx) {
     p(ctx2, dirty) {
       if (
         /*childCounter*/
-        ctx2[7] > 0
+        ctx2[9] > 0
       ) {
         if (if_block0) {
           if_block0.p(ctx2, dirty);
@@ -5417,7 +5428,7 @@ function create_fragment(ctx) {
       }
       if (
         /*noteIcon*/
-        ctx2[4]
+        ctx2[6]
       ) {
         if (if_block1) {
           if_block1.p(ctx2, dirty);
@@ -5431,15 +5442,15 @@ function create_fragment(ctx) {
         if_block1 = null;
       }
       if (!current || dirty[0] & /*title*/
-      8)
+      32)
         set_data(
           t2,
           /*title*/
-          ctx2[3]
+          ctx2[5]
         );
       if (
         /*isPinned*/
-        ctx2[5]
+        ctx2[7]
       ) {
         if (if_block2) {
         } else {
@@ -5453,7 +5464,7 @@ function create_fragment(ctx) {
       }
       if (
         /*childCounter*/
-        ctx2[7] > 0
+        ctx2[9] > 0
       ) {
         if (if_block3) {
           if_block3.p(ctx2, dirty);
@@ -5477,43 +5488,50 @@ function create_fragment(ctx) {
         attr(div1, "draggable", div1_draggable_value);
       }
       if (!current || dirty[0] & /*tagHighlightStyle*/
-      8192) {
+      32768) {
         attr(
           div1,
           "style",
           /*tagHighlightStyle*/
-          ctx2[13]
+          ctx2[15]
         );
       }
+      if (!current || dirty[0] & /*IsOpened, IsOpened, noteColor, noteOpacity*/
+      28) {
+        toggle_class(div1, "vf-tag-highlight", !/*IsOpened*/
+        ctx2[2] && /*noteColor*/
+        ctx2[3] && /*noteOpacity*/
+        ctx2[4] > 0);
+      }
       if (!current || dirty[0] & /*IsOpened, isDragOver*/
-      4100) {
+      16388) {
         toggle_class(
           div1,
           "vf-drop-target",
           /*isDragOver*/
-          ctx2[12]
+          ctx2[14]
         );
       }
       const style_changed = dirty[0] & /*tagHighlightStyle*/
-      8192;
+      32768;
       if (dirty[0] & /*tagHighlightBackground, tagHighlightStyle*/
-      24576 || style_changed) {
+      98304 || style_changed) {
         set_style(
           div1,
           "background-color",
           /*tagHighlightBackground*/
-          ctx2[14]
+          ctx2[16]
         );
       }
       if (
         /*childCounter*/
-        ctx2[7] > 0 && !/*isCollapsed*/
-        ctx2[6]
+        ctx2[9] > 0 && !/*isCollapsed*/
+        ctx2[8]
       ) {
         if (if_block4) {
           if_block4.p(ctx2, dirty);
           if (dirty[0] & /*childCounter, isCollapsed*/
-          192) {
+          768) {
             transition_in(if_block4, 1);
           }
         } else {
@@ -5590,7 +5608,7 @@ function instance($$self, $$props, $$invalidate) {
   let expandTransitionEnd;
   function expandTransitionStart() {
     expandTransitionWaiter = new Promise((resolve) => {
-      $$invalidate(11, expandTransitionEnd = resolve);
+      $$invalidate(13, expandTransitionEnd = resolve);
     });
   }
   function build_path(id2) {
@@ -5635,14 +5653,14 @@ function instance($$self, $$props, $$invalidate) {
     event.preventDefault();
     if (event.dataTransfer)
       event.dataTransfer.dropEffect = "move";
-    $$invalidate(12, isDragOver = true);
+    $$invalidate(14, isDragOver = true);
   }
   function handleDragLeave() {
-    $$invalidate(12, isDragOver = false);
+    $$invalidate(14, isDragOver = false);
   }
   function handleDrop(event) {
     event.preventDefault();
-    $$invalidate(12, isDragOver = false);
+    $$invalidate(14, isDragOver = false);
     if (!event.dataTransfer)
       return;
     let dragData;
@@ -5728,7 +5746,7 @@ function instance($$self, $$props, $$invalidate) {
     menu.showAtMouseEvent(event);
   }
   const focusNotes = (pathNotes) => __awaiter(void 0, void 0, void 0, function* () {
-    $$invalidate(6, isCollapsed = false);
+    $$invalidate(8, isCollapsed = false);
     yield tick();
     let next = pathNotes.shift();
     if (pathNotes.length === 0)
@@ -5744,7 +5762,7 @@ function instance($$self, $$props, $$invalidate) {
     }
   });
   const click_handler = () => {
-    $$invalidate(6, isCollapsed = !isCollapsed);
+    $$invalidate(8, isCollapsed = !isCollapsed);
   };
   const click_handler_1 = (event) => {
     if (event.shiftKey) {
@@ -5755,13 +5773,13 @@ function instance($$self, $$props, $$invalidate) {
       openNote(id, true);
       return;
     }
-    $$invalidate(6, isCollapsed = false);
+    $$invalidate(8, isCollapsed = false);
     openNote(id);
   };
   function note_1_binding($$value, child) {
     binding_callbacks[$$value ? "unshift" : "push"](() => {
       children2[child] = $$value;
-      $$invalidate(10, children2);
+      $$invalidate(12, children2);
     });
   }
   const introend_handler = () => {
@@ -5770,7 +5788,7 @@ function instance($$self, $$props, $$invalidate) {
   function div2_binding($$value) {
     binding_callbacks[$$value ? "unshift" : "push"](() => {
       myElement = $$value;
-      $$invalidate(9, myElement);
+      $$invalidate(11, myElement);
     });
   }
   $$self.$$set = ($$props2) => {
@@ -5779,56 +5797,55 @@ function instance($$self, $$props, $$invalidate) {
     if ("type" in $$props2)
       $$invalidate(1, type = $$props2.type);
     if ("node_path" in $$props2)
-      $$invalidate(24, node_path = $$props2.node_path);
+      $$invalidate(26, node_path = $$props2.node_path);
   };
   $$self.$$.update = () => {
     if ($$self.$$.dirty[0] & /*id, $active_id, type, $data, note*/
-    1677721603) {
+    1879048195) {
       $: {
         $$invalidate(2, IsOpened = id == $active_id);
         if (type == "top_dir") {
-          $$invalidate(3, title = "ROOT");
-          $$invalidate(7, childCounter = $data.top_list.length);
-          $$invalidate(8, childList = $data.top_list);
-          $$invalidate(27, noteColor = "");
-          $$invalidate(28, noteOpacity = 0);
+          $$invalidate(5, title = "ROOT");
+          $$invalidate(9, childCounter = $data.top_list.length);
+          $$invalidate(10, childList = $data.top_list);
+          $$invalidate(3, noteColor = "");
+          $$invalidate(4, noteOpacity = 0);
         }
         if (type == "orphan_dir") {
-          $$invalidate(3, title = "Orphans");
-          $$invalidate(7, childCounter = $data.orphans_list.length);
-          $$invalidate(8, childList = $data.orphans_list);
-          $$invalidate(27, noteColor = "");
-          $$invalidate(28, noteOpacity = 0);
+          $$invalidate(5, title = "Orphans");
+          $$invalidate(9, childCounter = $data.orphans_list.length);
+          $$invalidate(10, childList = $data.orphans_list);
+          $$invalidate(3, noteColor = "");
+          $$invalidate(4, noteOpacity = 0);
         }
         if (type == "sub_note") {
-          $$invalidate(26, note = $data.note_list[id]);
+          $$invalidate(28, note = $data.note_list[id]);
           if (note) {
-            $$invalidate(3, title = note.title);
-            $$invalidate(4, noteIcon = note.icon || "");
-            $$invalidate(5, isPinned = note.is_pinned);
-            $$invalidate(7, childCounter = note.count_children());
-            $$invalidate(8, childList = note.children);
-            $$invalidate(27, noteColor = note.color || "");
-            $$invalidate(28, noteOpacity = note.opacity || 0);
+            $$invalidate(5, title = note.title);
+            $$invalidate(6, noteIcon = note.icon || "");
+            $$invalidate(7, isPinned = note.is_pinned);
+            $$invalidate(9, childCounter = note.count_children());
+            $$invalidate(10, childList = note.children);
+            $$invalidate(3, noteColor = note.color || "");
+            $$invalidate(4, noteOpacity = note.opacity || 0);
           }
         }
       }
     }
     if ($$self.$$.dirty[0] & /*IsOpened, noteColor, noteOpacity*/
-    402653188) {
+    28) {
       $:
-        $$invalidate(14, tagHighlightBackground = !IsOpened && noteColor && noteOpacity > 0 ? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100}%, transparent)` : "");
-    }
-    if ($$self.$$.dirty[0] & /*IsOpened, noteColor, noteOpacity*/
-    402653188) {
-      $:
-        $$invalidate(13, tagHighlightStyle = !IsOpened && noteColor && noteOpacity > 0 ? "border-radius: 4px; margin: 0px 0px; padding: 2px 6px;" : "");
+        $$invalidate(16, tagHighlightBackground = !IsOpened && noteColor && noteOpacity > 0 ? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100}%, transparent)` : "");
     }
   };
+  $:
+    $$invalidate(15, tagHighlightStyle = "");
   return [
     id,
     type,
     IsOpened,
+    noteColor,
+    noteOpacity,
     title,
     noteIcon,
     isPinned,
@@ -5853,8 +5870,6 @@ function instance($$self, $$props, $$invalidate) {
     node_path,
     focusNotes,
     note,
-    noteColor,
-    noteOpacity,
     $data,
     $active_id,
     click_handler,
@@ -5876,15 +5891,15 @@ var Note = class extends SvelteComponent {
       {
         id: 0,
         type: 1,
-        node_path: 24,
-        focusNotes: 25
+        node_path: 26,
+        focusNotes: 27
       },
       null,
       [-1, -1]
     );
   }
   get focusNotes() {
-    return this.$$.ctx[25];
+    return this.$$.ctx[27];
   }
 };
 var Note_default = Note;
