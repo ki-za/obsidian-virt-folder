@@ -6506,7 +6506,7 @@ var VirtFolderPlugin = class extends import_obsidian10.Plugin {
         if (leaves.length === 0)
           this.activateView();
       }
-      this.registerEvent(this.app.metadataCache.on("resolve", this.onResolveMetadata));
+      this.registerEvent(this.app.metadataCache.on("changed", this.onResolveMetadata));
       this.registerEvent(this.app.workspace.on("file-open", this.onOpenFile, this));
       this.registerEvent(this.app.vault.on("create", this.onCreateFile));
       this.registerEvent(this.app.vault.on("delete", this.onDeleteFile));
