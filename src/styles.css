@@ -153,3 +153,9 @@
     margin: 0px 0px;
     padding: 2px 2px 3px 4px;
 }
+
+.tree-item-self.vf-tag-highlight {
+    padding-inline: var(--nav-item-padding);
+    border-radius: var(--radius-s);
+    margin: 0;
+}
