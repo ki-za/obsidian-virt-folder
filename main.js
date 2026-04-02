@@ -32,7 +32,7 @@ __export(main_exports, {
   default: () => VirtFolderPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian9 = require("obsidian");
+var import_obsidian10 = require("obsidian");
 
 // node_modules/svelte/src/runtime/internal/utils.js
 function noop() {
@@ -252,6 +252,13 @@ function set_data(text2, data2) {
     return;
   text2.data = /** @type {string} */
   data2;
+}
+function set_style(node, key, value, important) {
+  if (value == null) {
+    node.style.removeProperty(key);
+  } else {
+    node.style.setProperty(key, value, important ? "important" : "");
+  }
 }
 function toggle_class(element2, name, toggle) {
   element2.classList.toggle(name, !!toggle);
@@ -1135,7 +1142,7 @@ var NoteData = class {
 };
 
 // base_scanner.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // onenote.ts
 var OneNote = class {
@@ -1146,6 +1153,9 @@ var OneNote = class {
     this.children = [];
     this.is_pinned = false;
     this.icon = "";
+    this.color = "";
+    this.opacity = 0;
+    this.highlightColor = "";
     this.id = id;
     this.mtime = mtime;
     this.name = name;
@@ -1158,6 +1168,9 @@ var OneNote = class {
     this.is_pinned = false;
     this.mtime = 0;
     this.utime = 0;
+    this.color = "";
+    this.opacity = 0;
+    this.highlightColor = "";
   }
   is_no_parents() {
     return this.parents.length == 0;
@@ -1174,7 +1187,43 @@ var OneNote = class {
 };
 
 // settings.ts
+var import_obsidian2 = require("obsidian");
+
+// input_prompt_modal.ts
 var import_obsidian = require("obsidian");
+var InputPromptModal = class extends import_obsidian.Modal {
+  constructor(app, title, placeholder, onSubmit) {
+    super(app);
+    this.title = title;
+    this.placeholder = placeholder;
+    this.onSubmit = onSubmit;
+    this.submitted = false;
+  }
+  onOpen() {
+    const { contentEl, titleEl } = this;
+    titleEl.setText(this.title);
+    const input = new import_obsidian.TextComponent(contentEl).setPlaceholder(this.placeholder).setValue("");
+    input.inputEl.select();
+    new import_obsidian.Setting(contentEl).addButton((btn) => btn.setButtonText("Add").onClick(() => {
+      if (this.submitted)
+        return;
+      this.submitted = true;
+      this.onSubmit(input.getValue());
+      this.close();
+    })).addButton((btn) => btn.setButtonText("Cancel").onClick(() => {
+      this.close();
+    }));
+    input.inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !this.submitted) {
+        this.submitted = true;
+        this.onSubmit(input.getValue());
+        this.close();
+      }
+    });
+  }
+};
+
+// settings.ts
 var SortTypes = /* @__PURE__ */ ((SortTypes2) => {
   SortTypes2["file_name"] = "file_name";
   SortTypes2["note_title"] = "note_title";
@@ -1194,9 +1243,11 @@ var DEFAULT_SETTINGS = {
   UseWikiLinks: true,
   confirmDelete: true,
   autoReveal: false,
-  firstRun: true
+  firstRun: true,
+  tagHighlights: [],
+  highlightProps: [{ prop: "tags", color: "#ff6b6b", opacity: 0.3 }]
 };
-var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
+var VirtFolderSettingTab = class extends import_obsidian2.PluginSettingTab {
   constructor(app, plugin2) {
     super(app, plugin2);
     this.plugin = plugin2;
@@ -1212,7 +1263,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     let { containerEl } = this;
     containerEl.empty();
-    new import_obsidian.Setting(containerEl).setName("YAML for  note's folders").setDesc("The name can contain letters, numbers, minus sign, underscore and dots").addText((text2) => {
+    new import_obsidian2.Setting(containerEl).setName("YAML for  note's folders").setDesc("The name can contain letters, numbers, minus sign, underscore and dots").addText((text2) => {
       text2.setValue(this.plugin.settings.propertyName);
       text2.setPlaceholder("Folders");
       text2.onChange(async (value) => {
@@ -1227,7 +1278,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       });
     });
-    new import_obsidian.Setting(containerEl).setName("YAML for note's title").setDesc("Leave the field blank to take the title from the file name. Case-sensitive").addText((text2) => {
+    new import_obsidian2.Setting(containerEl).setName("YAML for note's title").setDesc("Leave the field blank to take the title from the file name. Case-sensitive").addText((text2) => {
       text2.setValue(this.plugin.settings.titleProp);
       text2.setPlaceholder("Title");
       text2.onChange(async (value) => {
@@ -1242,7 +1293,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       });
     });
-    new import_obsidian.Setting(containerEl).setName("YAML for note's icon").setDesc("The name can contain letters, numbers, minus sign, underscore and dots").addText((text2) => {
+    new import_obsidian2.Setting(containerEl).setName("YAML for note's icon").setDesc("The name can contain letters, numbers, minus sign, underscore and dots").addText((text2) => {
       text2.setValue(this.plugin.settings.iconProp);
       text2.setPlaceholder("vf_icon");
       text2.onChange(async (value) => {
@@ -1257,14 +1308,14 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Use title in commands").setDesc("Display note's title instead of file name when displaying command results").addToggle((tg) => {
+    new import_obsidian2.Setting(containerEl).setName("Use title in commands").setDesc("Display note's title instead of file name when displaying command results").addToggle((tg) => {
       tg.setValue(this.plugin.settings.cmdShowTitle);
       tg.onChange(async (value) => {
         this.plugin.settings.cmdShowTitle = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Sorting").setDesc("Note sorting criteria in the tree view").addDropdown((dc) => {
+    new import_obsidian2.Setting(containerEl).setName("Sorting").setDesc("Note sorting criteria in the tree view").addDropdown((dc) => {
       for (let key of Object.keys(SortTypes)) {
         dc.addOption(key, key);
       }
@@ -1275,7 +1326,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
         this.update_note_list();
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Reverse sort order").addToggle((tg) => {
+    new import_obsidian2.Setting(containerEl).setName("Reverse sort order").addToggle((tg) => {
       tg.setValue(this.plugin.settings.sortTreeRev);
       tg.onChange(async (value) => {
         this.plugin.settings.sortTreeRev = value;
@@ -1283,7 +1334,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
         this.update_note_list();
       });
     });
-    new import_obsidian.Setting(containerEl).setName("List of ignored paths").setDesc("Each line is interpreted as the start of an ignored path").addTextArea((textArea) => {
+    new import_obsidian2.Setting(containerEl).setName("List of ignored paths").setDesc("Each line is interpreted as the start of an ignored path").addTextArea((textArea) => {
       textArea.setValue(this.plugin.settings.ignorePath).setPlaceholder("Enter one or more paths relative to the archive root").onChange(async (value) => {
         this.plugin.settings.ignorePath = value;
         await this.plugin.saveSettings();
@@ -1294,7 +1345,7 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
       textArea.inputEl.setAttr("rows", 6);
       textArea.inputEl.setAttr("cols", 40);
     });
-    new import_obsidian.Setting(containerEl).setName("List of ignored tags").setDesc("Notes with any of these tags will be hidden from the tree. One tag per line, # is optional").addTextArea((textArea) => {
+    new import_obsidian2.Setting(containerEl).setName("List of ignored tags").setDesc("Notes with any of these tags will be hidden from the tree. One tag per line, # is optional").addTextArea((textArea) => {
       textArea.setValue(this.plugin.settings.ignoreTags).setPlaceholder("fleeting\n#daily").onChange(async (value) => {
         this.plugin.settings.ignoreTags = value;
         await this.plugin.saveSettings();
@@ -1305,12 +1356,12 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
       textArea.inputEl.setAttr("rows", 4);
       textArea.inputEl.setAttr("cols", 40);
     });
-    new import_obsidian.Setting(containerEl).setName("Ignored files").addText((text2) => {
+    new import_obsidian2.Setting(containerEl).setName("Ignored files").addText((text2) => {
       text2.setValue("0").setDisabled(true);
       this.counter = text2;
     });
     this.update_counter();
-    new import_obsidian.Setting(containerEl).setName("Use [[WikiLinks]] in YAML").addToggle((tg) => {
+    new import_obsidian2.Setting(containerEl).setName("Use [[WikiLinks]] in YAML").addToggle((tg) => {
       tg.setValue(this.plugin.settings.UseWikiLinks);
       tg.onChange(async (value) => {
         this.plugin.settings.UseWikiLinks = value;
@@ -1318,18 +1369,47 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
         this.update_note_list();
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Confirm before deleting").setDesc("Show confirmation dialog before deleting a note").addToggle((tg) => {
+    new import_obsidian2.Setting(containerEl).setName("Confirm before deleting").setDesc("Show confirmation dialog before deleting a note").addToggle((tg) => {
       tg.setValue(this.plugin.settings.confirmDelete);
       tg.onChange(async (value) => {
         this.plugin.settings.confirmDelete = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Auto reveal active file").setDesc("Automatically reveal the active file in the tree when opening any file").addToggle((tg) => {
+    new import_obsidian2.Setting(containerEl).setName("Auto reveal active file").setDesc("Automatically reveal the active file in the tree when opening any file").addToggle((tg) => {
       tg.setValue(this.plugin.settings.autoReveal);
       tg.onChange(async (value) => {
         this.plugin.settings.autoReveal = value;
         await this.plugin.saveSettings();
+      });
+    });
+    new import_obsidian2.Setting(containerEl).setName("Tag highlighting").setHeading();
+    new import_obsidian2.Setting(containerEl).setName("Add tag").setDesc("Add a tag to highlight in the tree view").addButton((btn) => {
+      btn.setIcon("plus").setTooltip("Add new tag").onClick(() => this.showAddTagModal());
+    });
+    const tagHighlights = this.plugin.settings.tagHighlights || [];
+    tagHighlights.forEach((config, index) => {
+      new import_obsidian2.Setting(containerEl).setName(config.tag).addColorPicker((cp) => {
+        cp.setValue(config.color);
+        cp.onChange(async (value) => {
+          this.plugin.settings.tagHighlights[index].color = value;
+          await this.plugin.saveSettings();
+          this.update_note_list();
+        });
+      }).addSlider((slider) => {
+        slider.setValue(config.opacity * 100).setLimits(10, 100, 5).setDynamicTooltip();
+        slider.onChange(async (value) => {
+          this.plugin.settings.tagHighlights[index].opacity = value / 100;
+          await this.plugin.saveSettings();
+          this.update_note_list();
+        });
+      }).addButton((btn) => {
+        btn.setIcon("trash").onClick(() => {
+          this.plugin.settings.tagHighlights.splice(index, 1);
+          this.plugin.saveSettings();
+          this.display();
+          this.update_note_list();
+        });
       });
     });
   }
@@ -1385,6 +1465,47 @@ var VirtFolderSettingTab = class extends import_obsidian.PluginSettingTab {
     if (!style)
       return "";
     return style.getPropertyValue(variable);
+  }
+  parseColorMappings(value) {
+    const result = [];
+    const lines = value.split(/\r|\n/).map((n) => n.trim()).filter((n) => n);
+    for (const line of lines) {
+      const parts = line.split(/\s+/);
+      if (parts.length < 3)
+        continue;
+      const pattern = parts[0];
+      const color = parts[1];
+      const opacity = parseInt(parts[2], 10);
+      if (opacity >= 0 && opacity <= 100) {
+        result.push({ pattern, color, opacity });
+      }
+    }
+    return result;
+  }
+  serializeColorMappings(mappings) {
+    return mappings.map((m) => `${m.pattern} ${m.color} ${m.opacity}`).join("\n");
+  }
+  showAddTagModal() {
+    new InputPromptModal(
+      this.app,
+      "Tag name:",
+      "e.g., #work, #urgent",
+      async (value) => {
+        if (!value)
+          return;
+        let tag = value.startsWith("#") ? value : "#" + value;
+        if (!/^#[a-zA-Z0-9._-]+$/.test(tag))
+          return;
+        this.plugin.settings.tagHighlights.push({
+          tag,
+          color: "#ff6b6b",
+          opacity: 0.3
+        });
+        await this.plugin.saveSettings();
+        this.display();
+        this.update_note_list();
+      }
+    ).open();
   }
 };
 
@@ -1468,7 +1589,7 @@ var BaseScanner = class {
       if (this.settings.ignored_tags.length > 0) {
         let cache = this.app.metadataCache.getFileCache(file);
         if (cache) {
-          let tags = (0, import_obsidian2.getAllTags)(cache);
+          let tags = (0, import_obsidian3.getAllTags)(cache);
           if (tags) {
             for (let tag of tags) {
               if (this.settings.ignored_tags.includes(tag))
@@ -1492,6 +1613,20 @@ var BaseScanner = class {
           return first;
       }
       return null;
+    }
+    return null;
+  }
+  matchTagHighlights(file, configs) {
+    if (configs.length === 0)
+      return null;
+    let metadata = this.app.metadataCache.getFileCache(file);
+    if (!metadata)
+      return null;
+    let tags = (0, import_obsidian3.getAllTags)(metadata) || [];
+    for (const config of configs) {
+      if (tags.includes(config.tag)) {
+        return { color: config.color, opacity: config.opacity };
+      }
     }
     return null;
   }
@@ -1562,6 +1697,36 @@ var BaseScanner = class {
         let value = metadata.frontmatter[this.settings.icon_prop];
         if (_is_string(value))
           this.note_list[file_id].icon = value;
+      }
+    }
+    const tagHighlights = this.plugin.settings.tagHighlights || [];
+    if (tagHighlights.length > 0) {
+      const tagColorResult = this.matchTagHighlights(file, tagHighlights);
+      if (tagColorResult) {
+        this.note_list[file_id].color = tagColorResult.color;
+        this.note_list[file_id].opacity = tagColorResult.opacity;
+      }
+    }
+    const highlightProps = this.plugin.settings.highlightProps || [];
+    if (metadata.frontmatter) {
+      for (const config of highlightProps) {
+        if (config.prop in metadata.frontmatter) {
+          let value = metadata.frontmatter[config.prop];
+          let tags = [];
+          if (typeof value === "string") {
+            tags = [value];
+          } else if (Array.isArray(value)) {
+            tags = value.filter((v) => typeof v === "string");
+          }
+          if (tags.length > 0) {
+            const hex = config.color;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            this.note_list[file_id].highlightColor = `rgba(${r}, ${g}, ${b}, ${config.opacity})`;
+            break;
+          }
+        }
       }
     }
   }
@@ -1788,7 +1953,7 @@ var BaseScanner = class {
     if (this.settings.ignored_tags.length > 0) {
       let cache = this.app.metadataCache.getFileCache(file);
       if (cache) {
-        let tags = (0, import_obsidian2.getAllTags)(cache);
+        let tags = (0, import_obsidian3.getAllTags)(cache);
         if (tags) {
           for (let tag of tags) {
             if (this.settings.ignored_tags.includes(tag))
@@ -1963,8 +2128,8 @@ var BaseScanner = class {
 };
 
 // select_file_modal.ts
-var import_obsidian3 = require("obsidian");
-var VF_SelectFile = class extends import_obsidian3.FuzzySuggestModal {
+var import_obsidian4 = require("obsidian");
+var VF_SelectFile = class extends import_obsidian4.FuzzySuggestModal {
   constructor(plugin2, onSubmit, excludeIds) {
     super(plugin2.app);
     this.plugin = plugin2;
@@ -2023,7 +2188,7 @@ var VF_SelectFile = class extends import_obsidian3.FuzzySuggestModal {
 };
 
 // select_prop_modal.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 function get_link_base(link) {
   let regexp_1 = /(?:\[\[(.+?)\||\[\[(.+?)\]\]|\[.+?\]\((.+?)\))/;
   let result = null;
@@ -2038,7 +2203,7 @@ function get_link_base(link) {
   }
   return result;
 }
-var VF_SelectPropModal = class extends import_obsidian4.SuggestModal {
+var VF_SelectPropModal = class extends import_obsidian5.SuggestModal {
   constructor(plugin2, yamlProp, onSubmit) {
     super(plugin2.app);
     this.plugin = plugin2;
@@ -2051,7 +2216,7 @@ var VF_SelectPropModal = class extends import_obsidian4.SuggestModal {
   open() {
     this.plugin.yaml.get_links(this.yamlProp, (links) => {
       if (links.length == 0) {
-        new import_obsidian4.Notice(`${this.yamlProp} is empty`);
+        new import_obsidian5.Notice(`${this.yamlProp} is empty`);
         return;
       }
       if (links.length == 1) {
@@ -2098,7 +2263,7 @@ var VF_SelectPropModal = class extends import_obsidian4.SuggestModal {
 };
 
 // tree_view.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 
 // node_modules/svelte/src/runtime/internal/disclose-version/index.js
 if (typeof window !== "undefined")
@@ -2168,10 +2333,10 @@ function slide(node, { delay = 0, duration = 400, easing = cubicOut, axis = "y" 
 }
 
 // components/Note.svelte
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // icon_picker_modal.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // emoji_names.ts
 var EMOJI_NAMES = {
@@ -4652,7 +4817,7 @@ function getAllItems() {
       items.push({ emoji: e, name: EMOJI_NAMES[e] || "" });
   return items;
 }
-var VF_IconPickerModal = class extends import_obsidian5.Modal {
+var VF_IconPickerModal = class extends import_obsidian6.Modal {
   constructor(plugin2, onSubmit) {
     super(plugin2.app);
     this.plugin = plugin2;
@@ -4755,9 +4920,9 @@ var VF_IconPickerModal = class extends import_obsidian5.Modal {
 // components/Note.svelte
 function get_each_context(ctx, list, i) {
   const child_ctx = ctx.slice();
-  child_ctx[36] = list[i];
-  child_ctx[37] = list;
-  child_ctx[38] = i;
+  child_ctx[40] = list[i];
+  child_ctx[41] = list;
+  child_ctx[42] = i;
   return child_ctx;
 }
 function create_if_block_4(ctx) {
@@ -4773,7 +4938,7 @@ function create_if_block_4(ctx) {
         div,
         "is-collapsed",
         /*isCollapsed*/
-        ctx[5]
+        ctx[6]
       );
     },
     m(target, anchor) {
@@ -4782,22 +4947,22 @@ function create_if_block_4(ctx) {
         dispose = [
           listen(div, "click", stop_propagation(
             /*click_handler*/
-            ctx[27]
+            ctx[31]
           )),
           action_destroyer(collapsedIcon_action = /*collapsedIcon*/
-          ctx[13].call(null, div))
+          ctx[15].call(null, div))
         ];
         mounted = true;
       }
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*isCollapsed*/
-      32) {
+      64) {
         toggle_class(
           div,
           "is-collapsed",
           /*isCollapsed*/
-          ctx2[5]
+          ctx2[6]
         );
       }
     },
@@ -4818,7 +4983,7 @@ function create_if_block_3(ctx) {
       span = element("span");
       t = text(
         /*noteIcon*/
-        ctx[3]
+        ctx[4]
       );
       attr(span, "class", "vf-note-icon");
     },
@@ -4828,11 +4993,11 @@ function create_if_block_3(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*noteIcon*/
-      8)
+      16)
         set_data(
           t,
           /*noteIcon*/
-          ctx2[3]
+          ctx2[4]
         );
     },
     d(detaching) {
@@ -4906,7 +5071,7 @@ function create_if_block(ctx) {
   );
   const get_key = (ctx2) => (
     /*child*/
-    ctx2[36]
+    ctx2[40]
   );
   for (let i = 0; i < each_value.length; i += 1) {
     let child_ctx = get_each_context(ctx, each_value, i);
@@ -4935,13 +5100,13 @@ function create_if_block(ctx) {
             div,
             "introstart",
             /*expandTransitionStart*/
-            ctx[14]
+            ctx[16]
           ),
           listen(
             div,
             "introend",
             /*introend_handler*/
-            ctx[30]
+            ctx[34]
           )
         ];
         mounted = true;
@@ -4949,7 +5114,7 @@ function create_if_block(ctx) {
     },
     p(ctx2, dirty) {
       if (dirty[0] & /*childList, build_path, children*/
-      34048) {
+      132352) {
         each_value = ensure_array_like(
           /*childList*/
           ctx2[8]
@@ -5006,27 +5171,27 @@ function create_each_block(key_1, ctx) {
   let note_1;
   let child = (
     /*child*/
-    ctx[36]
+    ctx[40]
   );
   let current;
   const assign_note_1 = () => (
     /*note_1_binding*/
-    ctx[29](note_1, child)
+    ctx[33](note_1, child)
   );
   const unassign_note_1 = () => (
     /*note_1_binding*/
-    ctx[29](null, child)
+    ctx[33](null, child)
   );
   let note_1_props = {
     id: (
       /*child*/
-      ctx[36]
+      ctx[40]
     ),
     node_path: (
       /*build_path*/
-      ctx[15](
+      ctx[17](
         /*child*/
-        ctx[36]
+        ctx[40]
       )
     )
   };
@@ -5048,23 +5213,23 @@ function create_each_block(key_1, ctx) {
     p(new_ctx, dirty) {
       ctx = new_ctx;
       if (child !== /*child*/
-      ctx[36]) {
+      ctx[40]) {
         unassign_note_1();
         child = /*child*/
-        ctx[36];
+        ctx[40];
         assign_note_1();
       }
       const note_1_changes = {};
       if (dirty[0] & /*childList*/
       256)
         note_1_changes.id = /*child*/
-        ctx[36];
+        ctx[40];
       if (dirty[0] & /*childList*/
       256)
         note_1_changes.node_path = /*build_path*/
-        ctx[15](
+        ctx[17](
           /*child*/
-          ctx[36]
+          ctx[40]
         );
       note_1.$set(note_1_changes);
     },
@@ -5108,11 +5273,11 @@ function create_fragment(ctx) {
   );
   let if_block1 = (
     /*noteIcon*/
-    ctx[3] && create_if_block_3(ctx)
+    ctx[4] && create_if_block_3(ctx)
   );
   let if_block2 = (
     /*isPinned*/
-    ctx[4] && create_if_block_2(ctx)
+    ctx[5] && create_if_block_2(ctx)
   );
   let if_block3 = (
     /*childCounter*/
@@ -5121,7 +5286,7 @@ function create_fragment(ctx) {
   let if_block4 = (
     /*childCounter*/
     ctx[7] > 0 && !/*isCollapsed*/
-    ctx[5] && create_if_block(ctx)
+    ctx[6] && create_if_block(ctx)
   );
   return {
     c() {
@@ -5136,7 +5301,7 @@ function create_fragment(ctx) {
       t1 = space();
       t2 = text(
         /*title*/
-        ctx[2]
+        ctx[3]
       );
       t3 = space();
       if (if_block2)
@@ -5149,14 +5314,26 @@ function create_fragment(ctx) {
         if_block4.c();
       attr(div0, "class", "tree-item-inner");
       attr(div1, "class", div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx[6] ? "vf-current-note" : ""));
+      (ctx[2] ? "vf-current-note" : ""));
       attr(div1, "draggable", div1_draggable_value = /*type*/
       ctx[1] === "sub_note");
+      attr(
+        div1,
+        "style",
+        /*tagHighlightStyle*/
+        ctx[13]
+      );
       toggle_class(
         div1,
         "vf-drop-target",
         /*isDragOver*/
         ctx[12]
+      );
+      set_style(
+        div1,
+        "background-color",
+        /*tagHighlightBackground*/
+        ctx[14]
       );
       attr(div2, "class", "tree-item is-clickable");
     },
@@ -5180,7 +5357,7 @@ function create_fragment(ctx) {
       append(div2, t5);
       if (if_block4)
         if_block4.m(div2, null);
-      ctx[31](div2);
+      ctx[35](div2);
       current = true;
       if (!mounted) {
         dispose = [
@@ -5188,35 +5365,35 @@ function create_fragment(ctx) {
             div1,
             "dragstart",
             /*handleDragStart*/
-            ctx[17]
+            ctx[19]
           ),
           listen(div1, "dragover", prevent_default(
             /*handleDragOver*/
-            ctx[18]
+            ctx[20]
           )),
           listen(
             div1,
             "dragleave",
             /*handleDragLeave*/
-            ctx[19]
+            ctx[21]
           ),
           listen(
             div1,
             "drop",
             /*handleDrop*/
-            ctx[20]
+            ctx[22]
           ),
           listen(
             div1,
             "contextmenu",
             /*handleContextMenu*/
-            ctx[21]
+            ctx[23]
           ),
           listen(
             div1,
             "click",
             /*click_handler_1*/
-            ctx[28]
+            ctx[32]
           )
         ];
         mounted = true;
@@ -5240,7 +5417,7 @@ function create_fragment(ctx) {
       }
       if (
         /*noteIcon*/
-        ctx2[3]
+        ctx2[4]
       ) {
         if (if_block1) {
           if_block1.p(ctx2, dirty);
@@ -5254,15 +5431,15 @@ function create_fragment(ctx) {
         if_block1 = null;
       }
       if (!current || dirty[0] & /*title*/
-      4)
+      8)
         set_data(
           t2,
           /*title*/
-          ctx2[2]
+          ctx2[3]
         );
       if (
         /*isPinned*/
-        ctx2[4]
+        ctx2[5]
       ) {
         if (if_block2) {
         } else {
@@ -5290,8 +5467,8 @@ function create_fragment(ctx) {
         if_block3 = null;
       }
       if (!current || dirty[0] & /*IsOpened*/
-      64 && div1_class_value !== (div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
-      (ctx2[6] ? "vf-current-note" : ""))) {
+      4 && div1_class_value !== (div1_class_value = "tree-item-self is-clickable mod-collapsible " + /*IsOpened*/
+      (ctx2[2] ? "vf-current-note" : ""))) {
         attr(div1, "class", div1_class_value);
       }
       if (!current || dirty[0] & /*type*/
@@ -5299,8 +5476,17 @@ function create_fragment(ctx) {
       ctx2[1] === "sub_note")) {
         attr(div1, "draggable", div1_draggable_value);
       }
+      if (!current || dirty[0] & /*tagHighlightStyle*/
+      8192) {
+        attr(
+          div1,
+          "style",
+          /*tagHighlightStyle*/
+          ctx2[13]
+        );
+      }
       if (!current || dirty[0] & /*IsOpened, isDragOver*/
-      4160) {
+      4100) {
         toggle_class(
           div1,
           "vf-drop-target",
@@ -5308,15 +5494,26 @@ function create_fragment(ctx) {
           ctx2[12]
         );
       }
+      const style_changed = dirty[0] & /*tagHighlightStyle*/
+      8192;
+      if (dirty[0] & /*tagHighlightBackground, tagHighlightStyle*/
+      24576 || style_changed) {
+        set_style(
+          div1,
+          "background-color",
+          /*tagHighlightBackground*/
+          ctx2[14]
+        );
+      }
       if (
         /*childCounter*/
         ctx2[7] > 0 && !/*isCollapsed*/
-        ctx2[5]
+        ctx2[6]
       ) {
         if (if_block4) {
           if_block4.p(ctx2, dirty);
           if (dirty[0] & /*childCounter, isCollapsed*/
-          160) {
+          192) {
             transition_in(if_block4, 1);
           }
         } else {
@@ -5357,17 +5554,19 @@ function create_fragment(ctx) {
         if_block3.d();
       if (if_block4)
         if_block4.d();
-      ctx[31](null);
+      ctx[35](null);
       mounted = false;
       run_all(dispose);
     }
   };
 }
 function instance($$self, $$props, $$invalidate) {
+  let tagHighlightBackground;
+  let tagHighlightStyle;
   let $data;
   let $active_id;
-  component_subscribe($$self, data, ($$value) => $$invalidate(25, $data = $$value));
-  component_subscribe($$self, active_id, ($$value) => $$invalidate(26, $active_id = $$value));
+  component_subscribe($$self, data, ($$value) => $$invalidate(29, $data = $$value));
+  component_subscribe($$self, active_id, ($$value) => $$invalidate(30, $active_id = $$value));
   let { id = "unknown-link-id" } = $$props;
   let { type = "sub_note" } = $$props;
   let { node_path = [] } = $$props;
@@ -5378,12 +5577,14 @@ function instance($$self, $$props, $$invalidate) {
   let isPinned = false;
   let isCollapsed = true;
   let IsOpened = false;
+  let noteColor = "";
+  let noteOpacity = 0;
   let childCounter = 0;
   let childList = [];
   let myElement;
   const children2 = {};
   const collapsedIcon = function(node) {
-    node.appendChild((0, import_obsidian6.getIcon)("right-triangle"));
+    node.appendChild((0, import_obsidian7.getIcon)("right-triangle"));
   };
   let expandTransitionWaiter = Promise.resolve();
   let expandTransitionEnd;
@@ -5453,7 +5654,7 @@ function instance($$self, $$props, $$invalidate) {
     let draggedId = dragData.id;
     let oldParentId = dragData.parentId;
     if (draggedId === id || node_path.includes(draggedId)) {
-      new import_obsidian6.Notice("Can't move a folder into itself");
+      new import_obsidian7.Notice("Can't move a folder into itself");
       return;
     }
     let newParentId = null;
@@ -5468,7 +5669,7 @@ function instance($$self, $$props, $$invalidate) {
     if (type !== "sub_note" && type !== "top_dir")
       return;
     event.preventDefault();
-    const menu = new import_obsidian6.Menu();
+    const menu = new import_obsidian7.Menu();
     let folderId = type === "top_dir" ? null : id;
     menu.addItem((item) => {
       item.setTitle("Create note").setIcon("plus").onClick(() => {
@@ -5527,7 +5728,7 @@ function instance($$self, $$props, $$invalidate) {
     menu.showAtMouseEvent(event);
   }
   const focusNotes = (pathNotes) => __awaiter(void 0, void 0, void 0, function* () {
-    $$invalidate(5, isCollapsed = false);
+    $$invalidate(6, isCollapsed = false);
     yield tick();
     let next = pathNotes.shift();
     if (pathNotes.length === 0)
@@ -5543,7 +5744,7 @@ function instance($$self, $$props, $$invalidate) {
     }
   });
   const click_handler = () => {
-    $$invalidate(5, isCollapsed = !isCollapsed);
+    $$invalidate(6, isCollapsed = !isCollapsed);
   };
   const click_handler_1 = (event) => {
     if (event.shiftKey) {
@@ -5554,7 +5755,7 @@ function instance($$self, $$props, $$invalidate) {
       openNote(id, true);
       return;
     }
-    $$invalidate(5, isCollapsed = false);
+    $$invalidate(6, isCollapsed = false);
     openNote(id);
   };
   function note_1_binding($$value, child) {
@@ -5578,50 +5779,68 @@ function instance($$self, $$props, $$invalidate) {
     if ("type" in $$props2)
       $$invalidate(1, type = $$props2.type);
     if ("node_path" in $$props2)
-      $$invalidate(22, node_path = $$props2.node_path);
+      $$invalidate(24, node_path = $$props2.node_path);
   };
   $$self.$$.update = () => {
     if ($$self.$$.dirty[0] & /*id, $active_id, type, $data, note*/
-    117440515) {
+    1677721603) {
       $: {
-        $$invalidate(6, IsOpened = id == $active_id);
+        $$invalidate(2, IsOpened = id == $active_id);
         if (type == "top_dir") {
-          $$invalidate(2, title = "ROOT");
+          $$invalidate(3, title = "ROOT");
           $$invalidate(7, childCounter = $data.top_list.length);
           $$invalidate(8, childList = $data.top_list);
+          $$invalidate(27, noteColor = "");
+          $$invalidate(28, noteOpacity = 0);
         }
         if (type == "orphan_dir") {
-          $$invalidate(2, title = "Orphans");
+          $$invalidate(3, title = "Orphans");
           $$invalidate(7, childCounter = $data.orphans_list.length);
           $$invalidate(8, childList = $data.orphans_list);
+          $$invalidate(27, noteColor = "");
+          $$invalidate(28, noteOpacity = 0);
         }
         if (type == "sub_note") {
-          $$invalidate(24, note = $data.note_list[id]);
+          $$invalidate(26, note = $data.note_list[id]);
           if (note) {
-            $$invalidate(2, title = note.title);
-            $$invalidate(3, noteIcon = note.icon || "");
-            $$invalidate(4, isPinned = note.is_pinned);
+            $$invalidate(3, title = note.title);
+            $$invalidate(4, noteIcon = note.icon || "");
+            $$invalidate(5, isPinned = note.is_pinned);
             $$invalidate(7, childCounter = note.count_children());
             $$invalidate(8, childList = note.children);
+            $$invalidate(27, noteColor = note.color || "");
+            $$invalidate(28, noteOpacity = note.opacity || 0);
           }
         }
       }
+    }
+    if ($$self.$$.dirty[0] & /*IsOpened, noteColor, noteOpacity*/
+    402653188) {
+      $:
+        $$invalidate(14, tagHighlightBackground = !IsOpened && noteColor && noteOpacity > 0 ? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100}%, transparent)` : "");
+    }
+    if ($$self.$$.dirty[0] & /*IsOpened, noteColor, noteOpacity*/
+    402653188) {
+      $:
+        $$invalidate(13, tagHighlightStyle = !IsOpened && noteColor && noteOpacity > 0 ? "border-radius: 4px; margin: 0px 0px; padding: 2px 6px;" : "");
     }
   };
   return [
     id,
     type,
+    IsOpened,
     title,
     noteIcon,
     isPinned,
     isCollapsed,
-    IsOpened,
     childCounter,
     childList,
     myElement,
     children2,
     expandTransitionEnd,
     isDragOver,
+    tagHighlightStyle,
+    tagHighlightBackground,
     collapsedIcon,
     expandTransitionStart,
     build_path,
@@ -5634,6 +5853,8 @@ function instance($$self, $$props, $$invalidate) {
     node_path,
     focusNotes,
     note,
+    noteColor,
+    noteOpacity,
     $data,
     $active_id,
     click_handler,
@@ -5655,15 +5876,15 @@ var Note = class extends SvelteComponent {
       {
         id: 0,
         type: 1,
-        node_path: 22,
-        focusNotes: 23
+        node_path: 24,
+        focusNotes: 25
       },
       null,
       [-1, -1]
     );
   }
   get focusNotes() {
-    return this.$$.ctx[23];
+    return this.$$.ctx[25];
   }
 };
 var Note_default = Note;
@@ -5856,6 +6077,10 @@ function instance2($$self, $$props, $$invalidate) {
     let first = pathNotes.shift();
     if (!first)
       return;
+    if (!children2[first] || !children2[first].focusNotes) {
+      setTimeout(() => this.focusTo(pathNotes), 50);
+      return;
+    }
     children2[first].focusNotes(pathNotes);
   }
   function note_binding($$value) {
@@ -5886,7 +6111,7 @@ var Component_default = Component;
 // tree_view.ts
 var TREE_ICON = "folder-tree";
 var VIEW_TYPE_VF = "virt-folder-view";
-var VirtFolderView = class extends import_obsidian7.ItemView {
+var VirtFolderView = class extends import_obsidian8.ItemView {
   constructor(leaf, plugin2) {
     super(leaf);
     this.plugin = plugin2;
@@ -5913,14 +6138,14 @@ var VirtFolderView = class extends import_obsidian7.ItemView {
 };
 
 // yaml_parser.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 var YamlParser = class {
   constructor(app, plugin2) {
     this.app = app;
     this.plugin = plugin2;
   }
   showMessage(msg) {
-    new import_obsidian8.Notice(msg);
+    new import_obsidian9.Notice(msg);
   }
   _fm_add_link(front, selected, prop) {
     let file = this.app.vault.getFileByPath(selected);
@@ -6085,7 +6310,7 @@ var YamlParser = class {
 };
 
 // main.ts
-var VirtFolderPlugin = class extends import_obsidian9.Plugin {
+var VirtFolderPlugin = class extends import_obsidian10.Plugin {
   constructor() {
     super(...arguments);
     this.onOpenFile = (file) => {
@@ -6097,19 +6322,19 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
       }
     };
     this.onCreateFile = (file) => {
-      if (file instanceof import_obsidian9.TFile) {
+      if (file instanceof import_obsidian10.TFile) {
         this.data.onCreate(file);
         this.update_data();
       }
     };
     this.onDeleteFile = (file) => {
-      if (file instanceof import_obsidian9.TFile) {
+      if (file instanceof import_obsidian10.TFile) {
         this.data.onDelete(file);
         this.update_data();
       }
     };
     this.onRenameFile = (file, oldPath) => {
-      if (file instanceof import_obsidian9.TFile) {
+      if (file instanceof import_obsidian10.TFile) {
         this.data.onRename(file, oldPath);
         this.update_data();
       }
@@ -6181,7 +6406,7 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
           let view = leaves[0].view;
           if ((_a = view.tree) == null ? void 0 : _a.selectedDoms) {
             for (let dom of view.tree.selectedDoms.values()) {
-              if (dom.file instanceof import_obsidian9.TFile)
+              if (dom.file instanceof import_obsidian10.TFile)
                 files.push(dom.file);
             }
           }
@@ -6267,7 +6492,7 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
       this.registerEvent(this.app.vault.on("delete", this.onDeleteFile));
       this.registerEvent(this.app.vault.on("rename", this.onRenameFile));
       this.registerEvent(this.app.workspace.on("file-menu", (menu, file, source) => {
-        if (!(file instanceof import_obsidian9.TFile))
+        if (!(file instanceof import_obsidian10.TFile))
           return;
         menu.addItem((item) => {
           item.setTitle("Add to virtual folder").setIcon("folder-plus").onClick(() => {
@@ -6292,7 +6517,7 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
         });
       }));
       this.registerEvent(this.app.workspace.on("files-menu", (menu, files, source) => {
-        let tfiles = files.filter((f) => f instanceof import_obsidian9.TFile);
+        let tfiles = files.filter((f) => f instanceof import_obsidian10.TFile);
         if (tfiles.length === 0)
           return;
         menu.addItem((item) => {
@@ -6317,7 +6542,7 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
       active_id.set("");
   }
   setActiveFile(file) {
-    if (file instanceof import_obsidian9.TFile) {
+    if (file instanceof import_obsidian10.TFile) {
       active_id.set(file.path);
     } else {
       active_id.set("");
@@ -6505,7 +6730,7 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
         return;
       }
       let ref = this.app.vault.on("create", async (file2) => {
-        if (!(file2 instanceof import_obsidian9.TFile))
+        if (!(file2 instanceof import_obsidian10.TFile))
           return;
         this.app.vault.offref(ref);
         if (parentId)
@@ -6556,7 +6781,7 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
       return;
     let doDelete = async () => {
       await this.app.vault.trash(file, true);
-      new import_obsidian9.Notice("Note deleted");
+      new import_obsidian10.Notice("Note deleted");
       this.update_data();
     };
     if (this.settings.confirmDelete) {
@@ -6587,7 +6812,7 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
         if (f)
           await this.app.vault.trash(f, true);
       }
-      new import_obsidian9.Notice(`${allIds.length} note(s) deleted`);
+      new import_obsidian10.Notice(`${allIds.length} note(s) deleted`);
       this.update_data();
     };
     new VF_ConfirmModal(this.app, doDelete, title, message).open();
@@ -6605,7 +6830,7 @@ var VirtFolderPlugin = class extends import_obsidian9.Plugin {
     this.update_data();
   }
 };
-var VF_ConfirmModal = class extends import_obsidian9.Modal {
+var VF_ConfirmModal = class extends import_obsidian10.Modal {
   constructor(app, onConfirm, title = "Delete note", message = "") {
     super(app);
     this.onConfirm = onConfirm;
@@ -6615,7 +6840,7 @@ var VF_ConfirmModal = class extends import_obsidian9.Modal {
   onOpen() {
     this.titleEl.setText(this.title);
     this.contentEl.createEl("p", { text: this.message });
-    new import_obsidian9.Setting(this.contentEl).addButton((btn) => {
+    new import_obsidian10.Setting(this.contentEl).addButton((btn) => {
       btn.setButtonText("Delete").setWarning().onClick(() => {
         this.close();
         this.onConfirm();

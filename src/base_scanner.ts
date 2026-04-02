@@ -1,7 +1,7 @@
 import { App, TFile, getAllTags } from 'obsidian';
 import { OneNote } from 'onenote';
 import  VirtFolderPlugin  from 'main';
-import { SortTypes } from 'settings';
+import { SortTypes, TagHighlightConfig, HighlightProp } from 'settings';
 
 function _is_string(value:any)
 {
@@ -153,6 +153,26 @@ export class BaseScanner
         return null;
     }
 
+    matchTagHighlights(file: TFile, configs: TagHighlightConfig[]): { color: string; opacity: number } | null
+    {
+        if (configs.length === 0) return null;
+
+        let metadata = this.app.metadataCache.getFileCache(file);
+        if (!metadata) return null;
+
+        let tags: string[] = getAllTags(metadata) || [];
+
+        for (const config of configs)
+        {
+            if (tags.includes(config.tag))
+            {
+                return { color: config.color, opacity: config.opacity };
+            }
+        }
+
+        return null;
+    }
+
     // can we get it from Note class?
 
     get_note_title(file:TFile)
@@ -235,6 +255,51 @@ export class BaseScanner
             {
                 let value = metadata.frontmatter[this.settings.icon_prop];
                 if(_is_string(value)) this.note_list[file_id].icon = value;
+            }
+        }
+
+        const tagHighlights = this.plugin.settings.tagHighlights || [];
+
+        if (tagHighlights.length > 0)
+        {
+            const tagColorResult = this.matchTagHighlights(file, tagHighlights);
+            if (tagColorResult)
+            {
+                this.note_list[file_id].color = tagColorResult.color;
+                this.note_list[file_id].opacity = tagColorResult.opacity;
+            }
+        }
+
+        const highlightProps = this.plugin.settings.highlightProps || [];
+        if (metadata.frontmatter)
+        {
+            for (const config of highlightProps)
+            {
+                if (config.prop in metadata.frontmatter)
+                {
+                    let value = metadata.frontmatter[config.prop];
+                    let tags: string[] = [];
+
+                    if (typeof value === "string")
+                    {
+                        tags = [value];
+                    }
+                    else if (Array.isArray(value))
+                    {
+                        tags = value.filter((v) => typeof v === "string");
+                    }
+
+                    if (tags.length > 0)
+                    {
+                        const hex = config.color;
+                        const r = parseInt(hex.slice(1, 3), 16);
+                        const g = parseInt(hex.slice(3, 5), 16);
+                        const b = parseInt(hex.slice(5, 7), 16);
+                        this.note_list[file_id].highlightColor =
+                            `rgba(${r}, ${g}, ${b}, ${config.opacity})`;
+                        break;
+                    }
+                }
             }
         }
     }

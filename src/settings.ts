@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting, TextAreaComponent, TextComponent, DropdownComponent, ToggleComponent } from 'obsidian';
 import VirtFolderPlugin  from './main';
+import { InputPromptModal } from './input_prompt_modal';
 
 export enum SortTypes
 {
@@ -8,6 +9,27 @@ export enum SortTypes
 	creation_time = "creation_time",
 	modification_time = "modification_time",
 };
+
+export interface ColorMapping
+{
+	pattern: string;
+	color: string;
+	opacity: number;
+}
+
+export interface TagHighlightConfig
+{
+	tag: string;
+	color: string;
+	opacity: number;
+}
+
+export interface HighlightProp
+{
+	prop: string;
+	color: string;
+	opacity: number;
+}
 
 export interface VirtFolderSettings
 {
@@ -23,6 +45,8 @@ export interface VirtFolderSettings
 	confirmDelete: boolean;
 	autoReveal: boolean;
 	firstRun: boolean;
+	tagHighlights: TagHighlightConfig[];
+	highlightProps: HighlightProp[];
 }
 
 export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
@@ -39,6 +63,8 @@ export const DEFAULT_SETTINGS: Partial<VirtFolderSettings> =
 	confirmDelete: true,
 	autoReveal: false,
 	firstRun: true,
+	tagHighlights: [],
+	highlightProps: [{ prop: "tags", color: "#ff6b6b", opacity: 0.3 }],
 };
 
 export class VirtFolderSettingTab extends PluginSettingTab
@@ -295,6 +321,52 @@ export class VirtFolderSettingTab extends PluginSettingTab
 			});
 		});
 
+		new Setting(containerEl)
+			.setName('Tag highlighting')
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName('Add tag')
+			.setDesc('Add a tag to highlight in the tree view')
+			.addButton(btn => {
+				btn.setIcon('plus')
+					.setTooltip('Add new tag')
+					.onClick(() => this.showAddTagModal());
+			});
+
+		const tagHighlights = this.plugin.settings.tagHighlights || [];
+		tagHighlights.forEach((config, index) => {
+			new Setting(containerEl)
+				.setName(config.tag)
+				.addColorPicker(cp => {
+					cp.setValue(config.color);
+					cp.onChange(async (value) => {
+						this.plugin.settings.tagHighlights[index].color = value;
+						await this.plugin.saveSettings();
+						this.update_note_list();
+					});
+				})
+				.addSlider(slider => {
+					slider.setValue(config.opacity * 100)
+						.setLimits(10, 100, 5)
+						.setDynamicTooltip();
+					slider.onChange(async (value) => {
+						this.plugin.settings.tagHighlights[index].opacity = value / 100;
+						await this.plugin.saveSettings();
+						this.update_note_list();
+					});
+				})
+				.addButton(btn => {
+					btn.setIcon('trash')
+						.onClick(() => {
+							this.plugin.settings.tagHighlights.splice(index, 1);
+							this.plugin.saveSettings();
+							this.display();
+							this.update_note_list();
+						});
+				});
+		});
+
 	}
 
 	update_counter()
@@ -371,5 +443,56 @@ export class VirtFolderSettingTab extends PluginSettingTab
 		if (!style) return '';
 
 		return style.getPropertyValue(variable);
+	}
+
+	parseColorMappings(value: string): ColorMapping[]
+	{
+		const result: ColorMapping[] = [];
+		const lines = value.split(/\r|\n/).map(n => n.trim()).filter(n => n);
+
+		for (const line of lines)
+		{
+			const parts = line.split(/\s+/);
+			if (parts.length < 3) continue;
+
+			const pattern = parts[0];
+			const color = parts[1];
+			const opacity = parseInt(parts[2], 10);
+
+			if (opacity >= 0 && opacity <= 100)
+			{
+				result.push({ pattern, color, opacity });
+			}
+		}
+
+		return result;
+	}
+
+	serializeColorMappings(mappings: ColorMapping[]): string
+	{
+		return mappings.map(m => `${m.pattern} ${m.color} ${m.opacity}`).join('\n');
+	}
+
+	showAddTagModal(): void
+	{
+		new InputPromptModal(
+			this.app,
+			'Tag name:',
+			'e.g., #work, #urgent',
+			async (value) => {
+				if (!value) return;
+				let tag = value.startsWith('#') ? value : '#' + value;
+				if (!/^#[a-zA-Z0-9._-]+$/.test(tag)) return;
+
+				this.plugin.settings.tagHighlights.push({
+					tag: tag,
+					color: '#ff6b6b',
+					opacity: 0.3
+				});
+				await this.plugin.saveSettings();
+				this.display();
+				this.update_note_list();
+			}
+		).open();
 	}
 }

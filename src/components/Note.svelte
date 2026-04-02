@@ -23,6 +23,8 @@
 	let isPinned = false;
 	let isCollapsed = true;
 	let IsOpened = false;
+	let noteColor = '';
+	let noteOpacity = 0;
 
     let childCounter = 0;
 	let childList: any[] = [];
@@ -38,6 +40,8 @@
 			title = 'ROOT';
 			childCounter = $data.top_list.length;
 			childList = $data.top_list;
+			noteColor = '';
+			noteOpacity = 0;
 		}
 
 		if(type == "orphan_dir")
@@ -45,6 +49,8 @@
 			title = 'Orphans';
 			childCounter = $data.orphans_list.length;
 			childList = $data.orphans_list;
+			noteColor = '';
+			noteOpacity = 0;
 		}
 
 		if(type == "sub_note")
@@ -58,9 +64,19 @@
 				isPinned = note.is_pinned;
 				childCounter = note.count_children();
 				childList = note.children;
+				noteColor = note.color || '';
+				noteOpacity = note.opacity || 0;
 			}
 		}
 	}
+
+	$: tagHighlightBackground = (!IsOpened && noteColor && noteOpacity > 0)
+		? `color-mix(in srgb, ${noteColor} ${noteOpacity * 100}%, transparent)`
+		: '';
+
+	$: tagHighlightStyle = (!IsOpened && noteColor && noteOpacity > 0)
+		? 'border-radius: 4px; margin: 3px 0px 0px 0px; padding: 4px 8px 2px 8px;'
+		: '';
 
 	const collapsedIcon: Action = function (node) {
 	    node.appendChild(getIcon("right-triangle")!);
@@ -287,7 +303,6 @@
 
 </script>
 
-
 <div class="tree-item is-clickable" bind:this={myElement}>
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -295,6 +310,8 @@
 		class="tree-item-self is-clickable mod-collapsible {IsOpened ? 'vf-current-note' : ''}"
 		class:vf-drop-target={isDragOver}
 		draggable={type === 'sub_note'}
+		style:background-color={tagHighlightBackground}
+		style={tagHighlightStyle}
 		on:dragstart={handleDragStart}
 		on:dragover|preventDefault={handleDragOver}
 		on:dragleave={handleDragLeave}

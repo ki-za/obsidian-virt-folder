@@ -147,3 +147,9 @@
     color: var(--text-muted);
     padding: 20px;
 }
+
+/* Color tag backgrounds */
+.tree-item-self[class*="vf-color-bg-"] {
+    margin: 0px 0px;
+    padding: 2px 2px 3px 4px;
+}

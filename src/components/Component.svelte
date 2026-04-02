@@ -8,6 +8,14 @@
 	{
 		let first:string|undefined = pathNotes.shift();
 		if(!first) return;
+		
+		// Wait for children to be mounted
+		if (!children[first] || !children[first].focusNotes)
+		{
+			setTimeout(() => this.focusTo(pathNotes), 50);
+			return;
+		}
+		
 		children[first].focusNotes(pathNotes);
 	}
 
